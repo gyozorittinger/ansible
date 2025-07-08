@@ -1,0 +1,49 @@
+---
+- name: "Install Yum Versionlock"
+  yum:
+    name: yum-plugin-versionlock
+    state: present
+
+- name: "Lock packages"
+  community.general.yum_versionlock:
+    state: present
+    name:
+      - kubeadm
+      - kubelet
+      - kubectl
+      - kubernetes-cni
+      - cri-tools
+      - containerd.io
+
+- name: "Check packages"
+  shell: |
+    yum check-update
+    exit 0
+  register: _gbt_packages_update_output
+
+- name: "Print installed/updated packages"
+  ansible.builtin.debug:
+    var: _gbt_packages_update_output.stdout_lines
+
+- name: "Prompt"
+  ansible.builtin.pause:
+    prompt: "Is it ok?"
+
+- name: "Update packages"
+  shell: |
+    yum update -y
+    exit 0
+  register: _gbt_packages_update_output
+
+- name: install yum-utils if needed
+  yum:
+    name: yum-utils
+    state: present
+    
+- name: "Reboot"
+  ansible.builtin.reboot:
+    reboot_timeout: 30
+ 
+- name: "Wait after reboot"
+  reboot:
+    post_reboot_delay: 30

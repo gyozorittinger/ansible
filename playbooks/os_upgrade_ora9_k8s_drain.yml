@@ -1,0 +1,28 @@
+---
+- name: Cordon node
+  command: >-
+    /usr/bin/kubectl cordon
+    {{ kube_override_hostname|default(inventory_hostname) }}
+  delegate_to: "{{ groups['kube_control_plane'][0] }}"
+  changed_when: false
+
+- name: Wait for node to cordon
+  command: >-
+    /usr/bin/kubectl get node
+    {{ kube_override_hostname|default(inventory_hostname) }}
+    -o json
+  register: wait_for_cordon
+  retries: 10
+  delay: 10
+  delegate_to: "{{ groups['kube_control_plane'][0] }}"
+  changed_when: false
+  until: (wait_for_cordon['stdout'] | from_json).spec.unschedulable
+
+- name: Drain node
+  command: >-
+    /usr/bin/kubectl drain
+    --force
+    --ignore-daemonsets
+    --delete-emptydir-data {{ kube_override_hostname|default(inventory_hostname) }}
+  delegate_to: "{{ groups['kube_control_plane'][0] }}"
+  changed_when: false

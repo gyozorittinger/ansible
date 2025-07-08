@@ -1,0 +1,60 @@
+---
+- name: Kubernetes Update
+  hosts: all
+  serial: 1
+  become: yes
+  vars_files:
+    - ../vars/k8s_workers_upgrade_vars.yml
+
+  tasks:
+
+    - name: Install Yum Versionlock
+      yum:
+        name: yum-plugin-versionlock
+        state: present
+
+    - name: Unlock packages
+      community.general.yum_versionlock:
+        state: absent
+        name:
+          - kubeadm
+          - kubelet
+          - kubectl
+          - kubernetes-cni
+          - containerd.io
+          - cri-tools
+
+    - name: Prompt
+      ansible.builtin.pause:
+        prompt: "Ready to upgrade node {{ inventory_hostname }} to version {{ k8s_version }}?"
+
+    - name: install Kubeadm package
+      shell: |
+        yum install -y kubeadm-{{ k8s_version }}
+
+    - name: Upgrade node
+      shell: |
+        kubeadm upgrade node
+
+    - name: Prompt
+      ansible.builtin.pause:
+        prompt: "Drian node: {{ inventory_hostname }}"
+
+    - name: Kubelet, Kubectl upgrade
+      shell: |
+        yum install -y kubelet-{{ k8s_version }} kubectl-{{ k8s_version }}
+
+    - name: Restart Kubelet service
+      shell: |
+        systemctl daemon-reload && sudo systemctl restart kubelet
+
+    - name: Versionloct packages
+      community.general.yum_versionlock:
+        state: present
+        name:
+          - kubeadm
+          - kubelet
+          - kubectl
+          - kubernetes-cni
+          - containerd.io
+          - cri-tools

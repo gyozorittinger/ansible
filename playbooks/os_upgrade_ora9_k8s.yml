@@ -1,0 +1,28 @@
+---
+- hosts:
+    - kube_control_plane
+    - all
+  become: true
+  become_method: sudo
+  serial: 1
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+
+  tasks:
+        - name: Get the node's details
+          command: /usr/bin/kubectl get node {{ kube_override_hostname|default(inventory_hostname) }} -o json 
+          register: kubectl_get_node
+          delegate_to: "{{ groups['kube_control_plane'][0] }}"
+          failed_when: false
+          changed_when: false
+
+        - name: Update Node
+          block:
+            - name: Cordon & drain node
+              include_tasks: os_upgrade_ora9_k8s_drain.yml
+
+            - name: Upgrade the Operating System
+              include_tasks: os_upgrade_ora9_k8s_package_update.yml
+
+            - name: Uncordon node
+              include_tasks: os_upgrade_ora9_k8s_uncordon.yml
+

@@ -1,0 +1,69 @@
+- name: Initialize first master
+  hosts: master1
+  become: true
+  vars_files:
+  - ../vars/k8s_install_vars.yml
+    
+  tasks:
+    - name: Initialize kubeadm with HA setup
+      command: kubeadm init --control-plane-endpoint "{{ loadbalancer_ip }}:8443" --upload-certs --pod-network-cidr={{ pod_cidr_addr }}
+      register: kubeadm_init
+      args:
+        creates: /etc/kubernetes/admin.conf
+
+    - name: Create kube config
+      command: mkdir -p /root/.kube
+
+    - name: Copy admin config
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /root/.kube/config
+        remote_src: yes
+
+    - name: Get kubeadm join command for control plane
+      shell: |
+        kubeadm token create --print-join-command --certificate-key $(kubeadm init phase upload-certs --upload-certs | tail -1)
+      register: join_command
+
+    - name: Save join command
+      set_fact:
+        control_plane_join: "{{ join_command.stdout }}"
+
+    - name: Download Calico manifest
+      get_url:
+        url: https://raw.githubusercontent.com/projectcalico/calico/v{{ calico_version }}/manifests/calico.yaml
+        dest: /tmp/calico.yaml
+
+    - name: Set custom pod CIDR in Calico manifest
+      replace:
+        path: /tmp/calico.yaml
+        regexp: '192\.168\.0\.0/16'
+        replace: '{{ pod_cidr_addr }}'
+
+    - name: Apply Calico CNI with updated CIDR
+      shell: |
+        kubectl apply -f /tmp/calico.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+
+
+- name: Join other masters
+  hosts: master2,master3
+  become: true
+  tasks:
+    - name: Run control plane join command
+      shell: "{{ hostvars['master1']['control_plane_join'] }} --control-plane"
+
+- name: Join worker nodes
+  hosts: workers
+  become: true
+  tasks:
+    - name: Get join command from master1
+      shell: kubeadm token create --print-join-command
+      delegate_to: master1
+      register: worker_join_cmd
+
+    - name: Join worker node
+      shell: "{{ worker_join_cmd.stdout }}"
+
+
