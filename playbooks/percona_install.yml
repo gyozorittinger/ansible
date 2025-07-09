@@ -1,0 +1,605 @@
+- name: Percona Install
+  hosts: all
+  become: yes
+  vars_files:
+    - ../vars/percona_install_vars.yml
+
+  tasks:
+    - name: Updates
+      yum:
+        update_cache: yes
+
+    - name: install yum-utils if needed
+      yum:
+        name: yum-utils
+        state: present
+
+    - name: check if reboot is required
+      ansible.builtin.shell:
+        cmd: "needs-restarting -r -s"
+      register: needs_restarting
+      changed_when: needs_restarting.rc == 1
+
+    - name: do reboot if needed
+      ansible.builtin.reboot:
+      when: needs_restarting.rc == 1
+
+    - name: Disable Firewall Service
+      systemd:
+        name: firewalld
+        state: stopped
+        enabled: false
+
+    - name: Add hosts to hosts file
+      shell: |
+        cat <<EOF > /etc/hosts
+        127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+        ::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+        {{ percona_vip_ip }} {{ percona_vip_fqdn }} 
+        {{ percona_master_ip }} {{ percona_master_fqdn }} node1
+        {{ percona_replica1_ip }} {{ percona_replica1_fqdn }} node2
+        {{ percona_replica2_ip }} {{ percona_replica2_fqdn }} node3
+        {{ percona_backrest_ip }} {{ percona_backrest_fqdn }} node4
+        EOF
+    
+    - name: Disable Selinux in config
+      shell: |
+        cat <<EOF > /etc/selinux/config
+        SELINUX=deisabled
+        SELINUXTYPE=targeted
+        EOF
+    
+    - name: Disable SELinux
+      ansible.posix.selinux:
+        state: disabled
+    
+    - name: Install Yum Versionlock
+      yum:
+        name: yum-plugin-versionlock
+        state: present
+
+    - name: Install Yum-utils
+      yum:
+        name: yum-utils
+        state: present
+
+    - name: Enable Addons
+      shell: |
+        yum-config-manager --enable ol8_addons
+    
+    - name: Disable Builtin Postgres
+      shell: | 
+        dnf -y module disable postgresql
+    
+    - name: Enable PPG Repo
+      shell: |
+        yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+    
+    - name: Enable Percona Repo
+      shell: |
+        yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+    
+    - name: Enable Percona repo
+      ansible.builtin.command: percona-release setup ppg{{ percona_version }}
+
+    - name: Install Python-Ydiff
+      yum:
+        name: python3-ydiff-1.2-10.el8
+        state: present
+
+    - name: Install Patroni
+      yum:
+        name: percona-patroni
+        state: present
+      when: inventory_hostname in groups["pgnodes"]
+    
+    - name: Install ETCD 
+      yum:
+        name: etcd
+        state: present
+      when: inventory_hostname in groups["pgnodes"] 
+    
+    - name: Install percona-haproxy
+      yum:
+        name: percona-haproxy
+        state: present
+      when: inventory_hostname in groups["pgnodes"]
+
+    - name: Install Extension
+      yum:
+        name: postgresql-contrib
+        state: present
+
+    - name: Install Python3-Devel
+      yum:
+        name: python3-devel
+        state: present
+
+    - name: Install binutils
+      yum:
+        name: binutils
+        state: present
+    
+    - name: Install python3-python-etcd
+      yum:
+        name: python3-python-etcd
+        state: present
+      when: inventory_hostname in groups["pgnodes"]
+    
+    - name: Install Python3-pip
+      yum:
+        name: python3-pip
+        state: present
+    
+    - name: Install Backrest
+      yum:
+        name: percona-pgbackrest
+        state: present
+    
+    - name: Stop ETCD service
+      systemd:
+        name: etcd
+        state: stopped
+        enabled: no
+        daemon-reload: no
+      when: inventory_hostname in groups["pgnodes"]
+    
+    - name: Stop Patroni service
+      systemd:
+        name: patroni
+        state: stopped
+        enabled: no
+        daemon-reload: no
+      when: inventory_hostname in groups["pgnodes"]
+
+    - name: Backup default etcd config
+      shell: mv /etc/etcd/etcd.conf.yaml /etc/etcd/etcd.conf.yaml.orig
+      run_once: true
+      when: inventory_hostname in groups["pgnodes"]
+
+    - name: Create etcd config on node1
+      shell: |
+        SHORT_NAME=$(grep $(hostname -A) /etc/hosts | awk '{print $3}')
+        cat <<EOF > /etc/etcd/etcd.conf.yaml
+        name: '$SHORT_NAME'
+        initial-cluster-token: PostgreSQL_HA_Cluster_1
+        initial-cluster-state: new
+        initial-cluster: node1=http://{{ percona_master_ip }}:2380
+        data-dir: /var/lib/etcd
+        initial-advertise-peer-urls: http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:2380
+        listen-peer-urls: http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:2380
+        advertise-client-urls: http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:2379
+        listen-client-urls: http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:2379
+        EOF
+      when: inventory_hostname == groups.pgnodes[0]
+    
+    - name: Start ETCD service on Node1
+      systemd:
+        name: etcd
+        state: started
+        enabled: yes
+        daemon-reload: yes
+      when: inventory_hostname == groups.pgnodes[0]
+
+    - name: Join node2 to ETCD cluster
+      shell: |
+        etcdctl member add node2 --peer-urls=http://{{ percona_replica1_ip }}:2380 --endpoints {{ percona_master_ip }}:2380
+      when: inventory_hostname == groups.pgnodes[0]
+
+    - name: Create etcd config on node2
+      shell: |
+        SHORT_NAME=$(grep $(hostname -A) /etc/hosts | awk '{print $3}')
+        cat <<EOF > /etc/etcd/etcd.conf.yaml
+        name: '$SHORT_NAME'
+        initial-cluster-token: PostgreSQL_HA_Cluster_1
+        initial-cluster-state: "existing"
+        initial-cluster: node1=http://{{ percona_master_ip }}:2380,node2=http://{{ percona_replica1_ip }}:2380
+        data-dir: /var/lib/etcd
+        initial-advertise-peer-urls: http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:2380
+        listen-peer-urls: http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:2380
+        advertise-client-urls: http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:2379
+        listen-client-urls: http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:2379
+        EOF
+      when: inventory_hostname == groups.pgnodes[1]
+    
+    - name: Start ETCD service on Node2
+      systemd:
+        name: etcd
+        state: started
+        enabled: yes
+        daemon-reload: yes
+      when: inventory_hostname == groups.pgnodes[1]
+
+    - name: Wait for ETCD Cluster
+      ansible.builtin.wait_for:
+        timeout: 60
+      when: inventory_hostname == groups.pgnodes[0]
+
+    - name: Join node3 to ETCD cluster
+      shell: |
+        etcdctl member add node3 --peer-urls=http://{{ percona_replica2_ip }}:2380 --endpoints {{ percona_master_ip }}:2380
+      when: inventory_hostname == groups.pgnodes[0]
+        
+    - name: Create etcd config on node3
+      shell: |
+        SHORT_NAME=$(grep $(hostname -A) /etc/hosts | awk '{print $3}')
+        cat <<EOF > /etc/etcd/etcd.conf.yaml
+        name: '$SHORT_NAME'
+        initial-cluster-token: PostgreSQL_HA_Cluster_1
+        initial-cluster-state: "existing"
+        initial-cluster: node1=http://{{ percona_master_ip }}:2380,node2=http://{{ percona_replica1_ip }}:2380,node3=http://{{ percona_replica2_ip }}:2380
+        data-dir: /var/lib/etcd
+        initial-advertise-peer-urls: http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:2380
+        listen-peer-urls: http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:2380
+        advertise-client-urls: http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:2379
+        listen-client-urls: http://{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}:2379
+        EOF
+      when: inventory_hostname == groups.pgnodes[2]
+    
+    - name: Start ETCD service on Node3
+      systemd:
+        name: etcd
+        state: started
+        enabled: yes
+        daemon-reload: yes
+      when: inventory_hostname == groups.pgnodes[2]
+
+    - name: Configure patroni
+      shell: |
+        export NODE_NAME={{ inventory_hostname }}
+        export NODE_IP={{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}
+        DATA_DIR="{{ pg_data_dir }}"
+        PG_BIN_DIR="/usr/pgsql-{{ percona_version }}/bin"
+        export NAMESPACE="percona_lab"
+        export SCOPE="cluster_1"
+        mkdir -p /etc/patroni/
+        chown -R  postgres:postgres /etc/patroni/
+        mkdir -p {{ pg_data_dir }}
+        chown -R  postgres:postgres {{ pg_data_dir }}
+        chmod 700 {{ pg_data_dir }}
+        cat <<EOF > /etc/patroni/patroni.yml
+        namespace: ${NAMESPACE}
+        scope: ${SCOPE}
+        name: ${NODE_NAME}
+
+        restapi:
+            listen: 0.0.0.0:8008
+            connect_address: ${NODE_IP}:8008
+
+        etcd3:
+            host: ${NODE_IP}:2379
+
+        bootstrap:
+          # this section will be written into Etcd:/<namespace>/<scope>/config after initializing new cluster
+          dcs:
+              ttl: 30
+              loop_wait: 10
+              retry_timeout: 10
+              maximum_lag_on_failover: 1048576
+
+              postgresql:
+                  use_pg_rewind: true
+                  use_slots: true
+                  parameters:
+                      wal_level: replica
+                      hot_standby: "on"
+                      wal_keep_segments: 10
+                      max_wal_senders: 5
+                      max_replication_slots: 10
+                      wal_log_hints: "on"
+                      logging_collector: 'on'
+                      max_wal_size: '10GB'
+                      archive_mode: "on"
+                      archive_timeout: 600s
+                      archive_command: "cp -f %p /home/postgres/archived/%f"
+
+          # some desired options for 'initdb'
+          initdb: # Note: It needs to be a list (some options need values, others are switches)
+              - encoding: UTF8
+              - data-checksums
+
+          pg_hba: # Add following lines to pg_hba.conf after running 'initdb'
+              - host replication replicator 127.0.0.1/32 trust
+              - host replication replicator 0.0.0.0/0 md5
+              - host all all 0.0.0.0/0 md5
+              - host all all ::0/0 md5
+
+          # Some additional users which needs to be created after initializing new cluster
+          users:
+              percona:
+                  password: {{ pg_postgres_password }}
+                  options:
+                      - createrole
+                      - createdb
+
+        postgresql:
+            cluster_name: cluster_1
+            listen: 0.0.0.0:5432
+            connect_address: ${NODE_IP}:5432
+            data_dir: ${DATA_DIR}
+            bin_dir: ${PG_BIN_DIR}
+            pgpass: /tmp/pgpass0
+            authentication:
+                replication:
+                    username: replicator
+                    password: FagAtzogImaydUg5
+                superuser:
+                    username: postgres
+                    password: {{ pg_postgres_password }}
+            parameters:
+                unix_socket_directories: "/var/run/postgresql/"
+            create_replica_methods:
+                - basebackup
+            basebackup:
+                checkpoint: 'fast'
+
+        tags:
+            nofailover: false
+            noloadbalance: false
+            clonefrom: false
+            nosync: false
+        EOF
+      when: inventory_hostname in groups["pgnodes"]
+
+    - name: Create patroni systemd service
+      shell: |
+       cat << EOF > /etc/systemd/system/patroni.service
+       [Unit]
+        Description=Runners to orchestrate a high-availability PostgreSQL
+        After=syslog.target network.target 
+
+        [Service]
+        Type=simple 
+
+        User=postgres
+        Group=postgres 
+
+        # Start the patroni process
+        ExecStart=/bin/patroni /etc/patroni/patroni.yml 
+
+        # Send HUP to reload from patroni.yml
+        ExecReload=/bin/kill -s HUP $MAINPID 
+
+        # only kill the patroni process, not its children, so it will gracefully stop postgres
+        KillMode=process 
+
+        # Give a reasonable amount of time for the server to start up/shut down
+        TimeoutSec=30 
+
+        # Do not restart the service if it crashes, we want to manually inspect database on failure
+        Restart=no 
+
+        [Install]
+        WantedBy=multi-user.target
+        EOF
+      when: inventory_hostname in groups["pgnodes"]
+      
+    - name: Start Patroni service
+      systemd:
+        name: patroni
+        state: started
+        enabled: yes
+        daemon-reload: yes
+      when: inventory_hostname in groups["pgnodes"]
+
+    - name: Create HAproxy Config
+      shell: | 
+        cat <<EOF> /etc/haproxy/haproxy.cfg
+        global
+            maxconn 100
+
+        defaults
+            log global
+            mode tcp
+            retries 2
+            timeout client 30m
+            timeout connect 4s
+            timeout server 30m
+            timeout check 5s
+
+        listen stats
+            mode http
+            bind *:7000
+            stats enable
+            stats uri /
+
+        listen primary
+            bind *:5000
+            option httpchk /primary
+            http-check expect status 200
+            default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
+            server node1 node1:5432 maxconn 100 check port 8008
+            server node2 node2:5432 maxconn 100 check port 8008
+            server node3 node3:5432 maxconn 100 check port 8008
+
+        listen standbys
+            balance roundrobin
+            bind *:5001
+            option httpchk /replica
+            http-check expect status 200
+            default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
+            server node1 node1:5432 maxconn 100 check port 8008
+            server node2 node2:5432 maxconn 100 check port 8008
+            server node3 node3:5432 maxconn 100 check port 8008
+        EOF
+      when: inventory_hostname in groups["pgnodes"]
+
+    - name: Start Haproxy service
+      systemd:
+        name: haproxy
+        state: started
+        enabled: yes
+        daemon-reload: yes
+      when: inventory_hostname in groups["pgnodes"]
+
+    - name: Install Keeplalived
+      yum:
+        name: keepalived
+        state: present
+        update_cache: true
+      when: inventory_hostname in groups["pgnodes"]
+
+    - name: Create keepalived check script
+      shell: |
+        cat <<EOF > /etc/keepalived/check_apiserver.sh
+        #!/bin/sh
+        APISERVER_VIP={{ percona_vip_ip }}
+        APISERVER_DEST_PORT=7000
+
+        errorExit() {
+          echo "*** $*" 1>&2
+          exit 1
+        }
+
+        curl --silent --max-time 2 http://localhost:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET http://localhost:${APISERVER_DEST_PORT}/"
+        if ip addr | grep -q ${APISERVER_VIP}; then
+          curl --silent --max-time 2 http://${APISERVER_VIP}:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET http://${APISERVER_VIP}:${APISERVER_DEST_PORT}/"
+        fi
+        EOF
+        chmod +x /etc/keepalived/check_apiserver.sh
+      when: inventory_hostname in groups["pgnodes"]
+      tags: keepalived_script,keepalived
+
+    - name: Backup default keepalived config
+      shell: mv /etc/keepalived/keepalived.conf /etc/keepalived/keepalived.conf.old
+      when: inventory_hostname in groups["pgnodes"]
+      tags: keepalived
+
+    - name: Create keepalived config on master1
+      shell: |
+        cat <<EOF > /etc/keepalived/keepalived.conf
+        global_defs {
+            router_id LVS_DEVEL
+        }
+        vrrp_script check_apiserver {
+          script "/etc/keepalived/check_apiserver.sh"
+          interval 3
+          weight -2
+          fall 10
+          rise 2
+        }
+
+        vrrp_instance VI_1 {
+            state MASTER
+            interface {{ interface_name }}
+            virtual_router_id {{ virtual_router_id }}
+            priority 255
+            authentication {
+                auth_type PASS
+                auth_pass P@##D321!
+            }
+            virtual_ipaddress {
+                {{ percona_vip_ip }}/32
+            }
+            track_script {
+                check_apiserver
+            }
+        }
+        EOF
+      when: inventory_hostname == groups.pgnodes[0]
+      tags: keepalived
+
+    - name: Create keepalived config on master2
+      shell: |
+        cat <<EOF > /etc/keepalived/keepalived.conf
+        global_defs {
+            router_id LVS_DEVEL
+        }
+        vrrp_script check_apiserver {
+          script "/etc/keepalived/check_apiserver.sh"
+          interval 3
+          weight -2
+          fall 10
+          rise 2
+        }
+
+        vrrp_instance VI_1 {
+            state BACKUP
+            interface {{ interface_name }}
+            virtual_router_id {{ virtual_router_id }}
+            priority 254
+            authentication {
+                auth_type PASS
+                auth_pass P@##D321!
+            }
+            virtual_ipaddress {
+                {{ percona_vip_ip }}/32
+            }
+            track_script {
+                check_apiserver
+            }
+        }
+        EOF
+      when: inventory_hostname == groups.pgnodes[1]
+      tags: keepalived
+
+
+    - name: Create keepalived config on master3
+      shell: |
+        cat <<EOF > /etc/keepalived/keepalived.conf
+        global_defs {
+            router_id LVS_DEVEL
+        }
+        vrrp_script check_apiserver {
+          script "/etc/keepalived/check_apiserver.sh"
+          interval 3
+          weight -2
+          fall 10
+          rise 2
+        }
+
+        vrrp_instance VI_1 {
+            state BACKUP
+            interface {{ interface_name }}
+            virtual_router_id {{ virtual_router_id }}
+            priority 253
+            authentication {
+                auth_type PASS
+                auth_pass P@##D321!
+            }
+            virtual_ipaddress {
+                {{ percona_vip_ip }}/32
+            }
+            track_script {
+                check_apiserver
+            }
+        }
+        EOF
+      when: inventory_hostname == groups.pgnodes[2]
+      tags: keepalived
+
+    - name: Create keepalived user
+      ansible.builtin.user:
+        name: keepalived_script
+        shell: /bin/bash
+        createhome: no
+      when: inventory_hostname in groups["pgnodes"]
+      tags: keepalived
+
+    - name: Restart Keepalived service
+      systemd:
+        name: keepalived
+        state: restarted
+        enabled: yes
+        daemon-reload: yes
+      when: inventory_hostname in groups["pgnodes"]
+      tags: keepalived
+    
+    - name: Versionloct packages
+      community.general.yum_versionlock:
+        state: present
+        name:
+         - percona-pgbackrest
+      when: inventory_hostname in groups["backrest"]
+
+    - name: Versionloct packages
+      community.general.yum_versionlock:
+        state: present
+        name:
+         - etcd
+         - percona-postgresql{{ percona_version }}
+         - percona-haproxy
+         - percona-patroni
+         - python3-ydiff
+         - ydiff
+      when: inventory_hostname in groups["pgnodes"]

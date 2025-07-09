@@ -1,0 +1,7 @@
+[pgnodes]
+ora-8-percona-m.cnt.sas
+ora-8-percona-r1.cnt.sas
+ora-8-percona-r2.cnt.sas
+
+[backrest]
+ora-8-percona-backrest.cnt.sas

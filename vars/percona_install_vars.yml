@@ -1,0 +1,47 @@
+# Percona VIP IP address
+percona_vip_ip: 192.168.73.240
+
+# Percona VIP FQDN
+percona_vip_fqdn: ora-8-percona
+
+# Percona master node's IP address
+percona_master_ip: 192.168.73.241
+
+# Percona master node's FQDN 
+percona_master_fqdn: ora-8-percona-m.cnt.sas
+
+# Percona first replica node's IP address
+percona_replica1_ip: 192.168.73.242
+
+# Percona first replica node's FQDN
+percona_replica1_fqdn: ora-8-percona-r1.cnt.sas
+
+# Percona second replica node's IP address
+percona_replica2_ip: 192.168.73.243
+
+# Percona second replica node's FQDN
+percona_replica2_fqdn: ora-8-percona-r2.cnt.sas
+
+# pgBackrest node's IP address
+
+percona_backrest_ip: 192.168.73.244
+
+# PGBackrest node's FQDN
+percona_backrest_fqdn: ora-8-percona-backrest.cnt.sas
+
+# PostgresSQL's version
+percona_version: 12
+
+# Node's interface name
+interface_name: ens192 
+
+# Keepalived virtual router ID. Must unique on subnet
+virtual_router_id: 160
+
+pg_data_dir: /var/lib/pgsql/data/
+
+# PostgresSQL data directory location
+pg_postgres_password: 'Admin1234'
+
+# pgBackrest Repo path
+pgbackrest_repo1_path: /var/lib/pgbackrest
