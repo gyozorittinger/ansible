@@ -2,7 +2,7 @@
 pod_cidr_addr: 172.16.0.0/16
 
 # Calico version
-calico_version: 3.30.1
+calico_version: 3.29.2
 
 # K8S VIP IP address
-loadbalancer_ip: 192.168.73.192 
+loadbalancer_ip: 192.168.73.230

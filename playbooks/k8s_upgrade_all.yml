@@ -1,0 +1,193 @@
+---
+- name: Upgrade first master
+  hosts: master1
+  tags: master1
+  become: true
+  vars_files:
+    - ../vars/k8s_upgrade_all_vars.yml
+    
+  tasks:
+    - name: Install Yum Versionlock
+      yum:
+        name: yum-plugin-versionlock
+        state: present
+
+    - name: Unlock packages
+      community.general.yum_versionlock:
+        state: absent
+        name:
+          - kubeadm
+          - kubelet
+          - kubectl
+          - kubernetes-cni
+          - containerd.io
+          - cri-tools
+
+    - name: Add Kubernetes yum repository
+      shell: |
+         cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+         [kubernetes_o3]
+         name=Kubernetes v{{ kubernetes_repo_version }}
+         baseurl=https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_repo_version }}/rpm/
+         gpgcheck=0
+         enabled=1
+         gpgkey=https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_repo_version }}/rpm/repodata/repomd.xml.key
+
+
+    - name: install Kubeadm package on Master1
+      shell: |
+        yum install -y kubeadm-{{ k8s_version }}
+
+    - name: create plan for apply
+      command: kubeadm upgrade plan
+      register: kubeadm_upgrade_plan
+
+    - name: Print installed/updated packages
+      ansible.builtin.debug:
+        var: kubeadm_upgrade_plan.stdout_lines
+
+    - name: Prompt before plan
+      ansible.builtin.pause:
+        prompt: "Plan is ok?"
+
+    - name: apply plan
+      command: kubeadm upgrade apply v{{ k8s_version }} --force
+      register: kubeadm_apply_plan
+    
+    - name: Prompt
+      ansible.builtin.pause:
+        prompt: "Drian node: {{ inventory_hostname }}"
+
+    - name: Kubelet, Kubectl upgrade
+      shell: |
+        yum install -y kubelet-{{ k8s_version }} kubectl-{{ k8s_version }}
+
+    - name: Restart Kubelet service
+      shell: |
+        systemctl daemon-reload && sudo systemctl restart kubelet
+
+    - name: Download current Calico manifest
+      get_url:
+        url: https://raw.githubusercontent.com/projectcalico/calico/v{{ calico_current_version }}/manifests/calico.yaml
+        dest: /tmp/calico.yaml
+
+    - name: Remmove current Calico version
+      shell: |
+        kubectl delete -f /tmp/calico.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+
+    - name: Wait for Calico
+      ansible.builtin.wait_for:
+        timeout: 60
+
+    - name: Download Calico manifest
+      get_url:
+        url: https://raw.githubusercontent.com/projectcalico/calico/v{{ calico_new_version }}/manifests/calico.yaml
+        dest: /tmp/calico.yaml
+
+    - name: Set custom pod CIDR in Calico manifest
+      replace:
+        path: /tmp/calico.yaml
+        regexp: '192\.168\.0\.0/16'
+        replace: '{{ pod_cidr_addr }}'
+
+    - name: Apply Calico CNI with updated CIDR
+      shell: |
+        kubectl apply -f /tmp/calico.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+
+    - name: Wait for Calico
+      ansible.builtin.wait_for:
+        timeout: 60
+
+    - name: Versionloct packages
+      community.general.yum_versionlock:
+        state: present
+        name:
+          - kubeadm
+          - kubelet
+          - kubectl
+          - kubernetes-cni
+          - containerd.io
+          - cri-tools
+
+
+
+- name: Kubernetes Update
+  hosts: master2,master3,workers
+  serial: 1
+  become: yes
+  vars_files:
+    - ../vars/k8s_upgrade_all_vars.yml
+
+  tasks:
+
+    - name: Add Kubernetes yum repository
+      shell: |
+         cat <<EOF > /etc/yum.repos.d/kubernetes_o.repo
+         [kubernetes_o3]
+         name=Kubernetes v{{ kubernetes_repo_version }}
+         baseurl=https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_repo_version }}/rpm/
+         gpgcheck=0
+         enabled=1
+         gpgkey=https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_repo_version }}/rpm/repodata/repomd.xml.key
+
+    - name: Install Yum Versionlock
+      yum:
+        name: yum-plugin-versionlock
+        state: present
+
+    - name: Unlock packages
+      community.general.yum_versionlock:
+        state: absent
+        name:
+          - kubeadm
+          - kubelet
+          - kubectl
+          - kubernetes-cni
+          - containerd.io
+          - cri-tools
+
+    - name: Prompt
+      ansible.builtin.pause:
+        prompt: "Ready to upgrade node {{ inventory_hostname }} to version {{ k8s_version }}?"
+
+    - name: install Kubeadm package
+      shell: |
+        yum install -y kubeadm-{{ k8s_version }}
+
+    - name: Upgrade node
+      shell: |
+        kubeadm upgrade node
+
+    - name: Prompt
+      ansible.builtin.pause:
+        prompt: "Drian node: {{ inventory_hostname }}"
+
+    - name: Kubelet, Kubectl upgrade
+      shell: |
+        yum install -y kubelet-{{ k8s_version }} kubectl-{{ k8s_version }}
+
+    - name: Restart Kubelet service
+      shell: |
+        systemctl daemon-reload && sudo systemctl restart kubelet
+
+    - name: Uncordon node
+      command: >-
+        /usr/bin/kubectl uncordon
+        {{ kube_override_hostname|default(inventory_hostname) }}
+      delegate_to: "{{ groups['masters'][0] }}"
+      changed_when: false
+
+    - name: Versionloct packages
+      community.general.yum_versionlock:
+        state: present
+        name:
+          - kubeadm
+          - kubelet
+          - kubectl
+          - kubernetes-cni
+          - containerd.io
+          - cri-tools

@@ -1,0 +1,6 @@
+# Kurenetes version
+k8s_version: 1.31.10
+kubernetes_repo_version: 1.31
+calico_current_version: 3.29.3
+calico_new_version: 3.30.1
+pod_cidr_addr: 172.16.0.0/16
