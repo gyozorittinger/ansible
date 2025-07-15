@@ -1,10 +1,15 @@
 [masters]
-master1 ansible_host=k8s-m1
-master2 ansible_host=k8s-m2
-master3 ansible_host=k8s-m3
+master1 ansible_host=glow2-k8s-m1
+master2 ansible_host=glow2-k8s-m2
+master3 ansible_host=glow2-k8s-m3
 
 [workers]
-worker1 ansible_host=k8s-w1
+worker1 ansible_host=glow2-k8s-n1
+worker2 ansible_host=glow2-k8s-n2
+worker3 ansible_host=glow2-k8s-n3
+worker4 ansible_host=glow2-k8s-n4
+worker5 ansible_host=glow2-k8s-n5
+worker6 ansible_host=glow2-k8s-n6
 
 [kube_cluster:children]
 masters

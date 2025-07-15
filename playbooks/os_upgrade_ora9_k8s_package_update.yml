@@ -42,7 +42,7 @@
     
 - name: "Reboot"
   ansible.builtin.reboot:
-    reboot_timeout: 30
+    reboot_timeout: 240
  
 - name: "Wait after reboot"
   reboot:
