@@ -28,6 +28,17 @@
       shell: |
         swapoff -a
 
+    - name: Install chrony
+      yum:
+        name: chrony
+        state: present
+    
+    - name: Restart chrony service
+      systemd:
+        name: chronyd
+        state: restarted
+        enabled: yes
+        daemon-reload: yes
 
     - name: Disable SWAP in fstab
       replace:
