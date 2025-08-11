@@ -82,6 +82,13 @@
     - name: Apply sysctl parameters
       command: sysctl --system
     
+    - name: modify ulimit
+      shell: |
+        cp /etc/security/limits.conf /etc/security/limits.conf.bac
+        cat <<EOF > /etc/security/limits.conf
+        *               soft    nofile          65000
+        *               hard    nofile          65000
+
     
     - name: add Docker repo
       shell: |
