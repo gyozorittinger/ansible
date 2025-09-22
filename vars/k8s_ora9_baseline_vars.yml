@@ -1,29 +1,29 @@
 # Kubernetes version
-kubernetes_version: 1.31.10
+kubernetes_version: 1.34.1
 
 # Kubernetes repo version
-kubernetes_repo_version: 1.31
+kubernetes_repo_version: 1.34
 
 # K8s Cluster name
-cluster_name: glow2-k8s
+cluster_name: aml11-test
 
 # K8s Cluster suffix
 cluster_sufix: .cnt.sas
 
 # IP Address of master1
-master_1_ip: 192.168.73.180
+master_1_ip: 192.168.73.89
 
 # IP Address of master2
-master_2_ip: 192.168.73.181
+master_2_ip: 192.168.73.90
 
 # IP Address of master3
-master_3_ip: 192.168.73.182
+master_3_ip: 192.168.73.91
 
 # IP VIP Address
-apiserver_vip: 192.168.73.192
+apiserver_vip: 192.168.73.88
 
 # Keepalives's router id. Must unique on a subnet
-virtual_router_id: 151
+virtual_router_id: 164
 
 #Network interface name
-interface_name: ens160
+interface_name: ens192

@@ -14,6 +14,16 @@
         name: yum-utils
         state: present
 
+    - name: install wget if needed
+      yum:
+        name: wget
+        state: present
+
+    - name: Get K9S RPM and Install
+      shell: |
+        wget https://github.com/derailed/k9s/releases/download/v0.40.10/k9s_linux_amd64.rpm -o /tmp/k9s_linux_amd64.rpm
+        rpm -i /tmp/k9s_linux_amd64.rpm
+
     - name: check if reboot is required
       ansible.builtin.shell:
         cmd: "needs-restarting -r -s"

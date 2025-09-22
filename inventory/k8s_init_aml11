@@ -1,15 +1,14 @@
 [masters]
-master1 ansible_host=glow2-k8s-m1
-master2 ansible_host=glow2-k8s-m2
-master3 ansible_host=glow2-k8s-m3
+master1 ansible_host=aml11-test-m1.cnt.sas
+master2 ansible_host=aml11-test-m2.cnt.sas
+master3 ansible_host=aml11-test-m3.cnt.sas
 
 [workers]
-worker1 ansible_host=glow2-k8s-n1
-worker2 ansible_host=glow2-k8s-n2
-worker3 ansible_host=glow2-k8s-n3
-worker4 ansible_host=glow2-k8s-n4
-worker5 ansible_host=glow2-k8s-n5
-worker6 ansible_host=glow2-k8s-n6
+worker1 ansible_host=aml11-test-n1.cnt.sas
+worker2 ansible_host=aml11-test-n2.cnt.sas
+worker3 ansible_host=aml11-test-n3.cnt.sas
+worker4 ansible_host=aml11-test-n4.cnt.sas
+worker5 ansible_host=aml11-test-n5.cnt.sas
 
 [kube_cluster:children]
 masters
