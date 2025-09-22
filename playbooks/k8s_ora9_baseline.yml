@@ -21,8 +21,9 @@
 
     - name: Get K9S RPM and Install
       shell: |
-        wget https://github.com/derailed/k9s/releases/download/v0.40.10/k9s_linux_amd64.rpm -o /tmp/k9s_linux_amd64.rpm
+        wget https://github.com/derailed/k9s/releases/download/v0.40.10/k9s_linux_amd64.rpm -O /tmp/k9s_linux_amd64.rpm
         rpm -i /tmp/k9s_linux_amd64.rpm
+      tags: k9s
 
     - name: check if reboot is required
       ansible.builtin.shell:
