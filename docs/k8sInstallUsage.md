@@ -1,6 +1,6 @@
-#How to install K8S with playbooks
+# How to install K8S with playbooks
 
-##Baseline
+## Baseline
 
 This playbook installs the required components like
 - OS parameters
@@ -10,13 +10,13 @@ This playbook installs the required components like
 - Kurenetes binaries (kubeadm, kubectl, cri)
 - Containerd
 
-###Usage
+### Usage
 
 ```bash
 ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v
 ```
 
-###Tags
+### Tags
 
 You can skip some steps with tags:
 
@@ -32,11 +32,11 @@ ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v 
 
 You can use multiple tags in a run.
 
-##Install
+## Install
 
 This playbook install the K8S Cluster
 
-###Usage
+### Usage
 
 ```bash
 ansible-playbook playbooks/k8s_install.yml -i inventory/k8s_init_aml11
