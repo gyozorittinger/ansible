@@ -39,5 +39,5 @@ This playbook install the K8S Cluster
 ### Usage
 
 ```bash
-ansible-playbook playbooks/k8s_install.yml -i inventory/k8s_init_aml11
+ansible-playbook playbooks/k8s_install.yml -i inventory/k8s_init_aml11 -v
 ```
