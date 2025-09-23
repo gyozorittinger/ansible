@@ -36,6 +36,10 @@ You can use multiple tags in a run.
 
 This playbook install the K8S Cluster
 
+### Calico prompt
+
+At calico install step the playbook stops. You should check the POD_CIDR in /tmp/calico.yaml on the master1 node before continue the install. 
+
 ### Usage
 
 ```bash
