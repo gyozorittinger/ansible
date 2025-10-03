@@ -386,7 +386,7 @@
       shell: | 
         cat <<EOF> /etc/haproxy/haproxy.cfg
         global
-            maxconn 100
+            maxconn 5000
 
         defaults
             log global
@@ -408,9 +408,9 @@
             option httpchk /primary
             http-check expect status 200
             default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
-            server node1 node1:5432 maxconn 100 check port 8008
-            server node2 node2:5432 maxconn 100 check port 8008
-            server node3 node3:5432 maxconn 100 check port 8008
+            server node1 node1:5432 maxconn 5000 check port 8008
+            server node2 node2:5432 maxconn 5000 check port 8008
+            server node3 node3:5432 maxconn 5000 check port 8008
 
         listen standbys
             balance roundrobin
@@ -418,9 +418,9 @@
             option httpchk /replica
             http-check expect status 200
             default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
-            server node1 node1:5432 maxconn 100 check port 8008
-            server node2 node2:5432 maxconn 100 check port 8008
-            server node3 node3:5432 maxconn 100 check port 8008
+            server node1 node1:5432 maxconn 5000 check port 8008
+            server node2 node2:5432 maxconn 5000 check port 8008
+            server node3 node3:5432 maxconn 5000 check port 8008
         EOF
       when: inventory_hostname in groups["pgnodes"]
 
