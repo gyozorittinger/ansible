@@ -5,13 +5,13 @@
 
 vars/k8s_upgrade_all_vars.yml
 
-| Variables | Description |
-| --- | --- |
-| k8s_version | The Kubernetes version after upgrade:|
-| kubernetes_repo_version | The Kubernetes repo version after upgrade |
-| calico_current_version | The current Calico version |
-| calico_new_version | The Calico version after upgrade |
-| pod_cidr_addr | Pod CIDR address* |
+Variables | Description
+--- | --- |
+k8s_version | The Kubernetes version after upgrade
+kubernetes_repo_version | The Kubernetes repo version after upgrade 
+calico_current_version | The current Calico version 
+calico_new_version | The Calico version after upgrade 
+pod_cidr_addr | Pod CIDR address* 
 
 *To get the Pod CIDR address use this command on master node:
 ```bash
