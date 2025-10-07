@@ -97,7 +97,11 @@
         path: /tmp/calico.yaml
         regexp: '#   value: "192\.168\.0\.0/16'
         replace: '  value: "{{ pod_cidr_addr }}'
-        
+
+    - name: Prompt
+      ansible.builtin.pause:
+        prompt: "Check calico.yaml: {{ inventory_hostname }}"
+
     - name: Apply Calico CNI with updated CIDR
       shell: |
         kubectl apply -f /tmp/calico.yaml

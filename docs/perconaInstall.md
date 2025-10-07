@@ -11,6 +11,7 @@ percona_install.yml
 
 This playbook installs the required components like
 - Keepalived
+- ETCD cluster
 - HaProxy
 - Percona repository
 - Percona Cluster
