@@ -5,6 +5,8 @@
 
 vars/k8s_upgrade_all_vars.yml
 
+| Variables | Description |
+| --- | --- |
 | k8s_version | The Kubernetes version after upgrade:|
 | kubernetes_repo_version | The Kubernetes repo version after upgrade |
 | calico_current_version | The current Calico version |
