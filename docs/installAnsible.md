@@ -1,4 +1,4 @@
-# Install ansible and requred modules
+# Install ansible and required modules
 
 ```bash
 dnf install ansible-core
