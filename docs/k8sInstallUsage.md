@@ -39,6 +39,10 @@ You can use multiple tags in a run.
 
 ## Install
 
+### IMPORTANT
+
+The masters have to master1, master2, master3 names in the inventory file!
+
 This playbook install the K8S Cluster
 
 ### Calico prompt
