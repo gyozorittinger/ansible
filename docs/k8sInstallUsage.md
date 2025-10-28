@@ -30,6 +30,11 @@ Don't install Keepalived
 ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v --skip-tags keepalived
 ```
 
+Don't reboot node after update
+```bash
+ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v --skip-tags reboot
+```
+
 You can use multiple tags in a run.
 
 ## Install
