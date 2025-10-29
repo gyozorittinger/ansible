@@ -32,12 +32,12 @@ You can skip some steps with tags:
 
 Don't install keepalived
 ```bash
-ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v --skip-tags keepalived_script,keepalived
+ansible-playbook playbooks/percona_install.yml -i inventory/percona -v --skip-tags keepalived_script,keepalived
 ```
 
 Skip reboot after update:
 ```bash
-ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v --skip-tags reboot
+ansible-playbook playbooks/percona_install.yml -i inventory/percona -v --skip-tags reboot
 ```
 
 ## Step 2: Modify Percona Cluster config
