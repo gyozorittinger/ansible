@@ -1,8 +1,8 @@
 # Kubernetes version
-kubernetes_version: 1.32.9
+kubernetes_version: 1.31.13
 
 # Kubernetes repo version
-kubernetes_repo_version: 1.32
+kubernetes_repo_version: 1.31
 
 # K8s Cluster name
 cluster_name: aml11-test
