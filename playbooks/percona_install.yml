@@ -52,8 +52,8 @@
         EOF
     
     - name: Disable SELinux
-      ansible.posix.selinux:
-        state: disabled
+      shell: |
+        setenforce 0
     
     - name: Install Yum Versionlock
       yum:
