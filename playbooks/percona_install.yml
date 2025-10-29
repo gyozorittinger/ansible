@@ -445,17 +445,15 @@
       shell: |
         cat <<EOF > /etc/keepalived/check_apiserver.sh
         #!/bin/sh
-        APISERVER_VIP={{ percona_vip_ip }}
-        APISERVER_DEST_PORT=7000
 
         errorExit() {
           echo "*** $*" 1>&2
           exit 1
         }
 
-        curl --silent --max-time 2 http://localhost:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET http://localhost:${APISERVER_DEST_PORT}/"
-        if ip addr | grep -q ${APISERVER_VIP}; then
-          curl --silent --max-time 2 http://${APISERVER_VIP}:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET http://${APISERVER_VIP}:${APISERVER_DEST_PORT}/"
+        curl --silent --max-time 2 http://localhost:7000/ -o /dev/null || errorExit "Error GET http://localhost:7000/"
+        if ip addr | grep -q {{ percona_vip_ip }}; then
+          curl --silent --max-time 2 http://{{ percona_vip_ip }}:7000/ -o /dev/null || errorExit "Error GET http://{{ percona_vip_ip }}:7000/"
         fi
         EOF
         chmod +x /etc/keepalived/check_apiserver.sh
