@@ -35,6 +35,11 @@ Don't install keepalived
 ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v --skip-tags keepalived_script,keepalived
 ```
 
+Skip reboot after update:
+```bash
+ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v --skip-tags reboot
+```
+
 ## Step 2: Modify Percona Cluster config
 
 ```bash
