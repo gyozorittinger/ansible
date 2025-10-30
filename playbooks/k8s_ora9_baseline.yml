@@ -259,6 +259,7 @@
       shell: |
         cat <<EOF > /etc/keepalived/keepalived.conf
         global_defs {
+            enable_script_security
             router_id LVS_DEVEL
         }
         vrrp_script check_apiserver {
@@ -291,6 +292,7 @@
       shell: |
         cat <<EOF > /etc/keepalived/keepalived.conf
         global_defs {
+            enable_script_security
             router_id LVS_DEVEL
         }
         vrrp_script check_apiserver {
@@ -324,6 +326,7 @@
       shell: |
         cat <<EOF > /etc/keepalived/keepalived.conf
         global_defs {
+            enable_script_security
             router_id LVS_DEVEL
         }
         vrrp_script check_apiserver {
