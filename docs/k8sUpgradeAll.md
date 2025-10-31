@@ -63,7 +63,7 @@ ansible-playbook playbooks/k8s_upgrade_all.yml -i inventory/<inventory file> -v
 
 Skip master upgrade, upgarde only master2, master3 and teh workers
 ```bash
-ansible-playbook playbooks/k8s_upgrade_all.yml -i inventory/<inventory file> -v --skip-tags=master_upgrade
+ansible-playbook playbooks/k8s_upgrade_all.yml -i inventory/<inventory file> -v --skip-tags master_upgrade
 ```
 
 
