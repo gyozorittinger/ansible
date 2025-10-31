@@ -1,11 +1,10 @@
 ---
 - name: Upgrade first master
-  hosts: master[0]
+  hosts: masters[0]
   tags: master1
   become: true
   vars_files:
     - ../vars/k8s_upgrade_all_vars.yml
-    
   tasks:
     - name: Install Yum Versionlock
       yum:
@@ -147,7 +146,7 @@
 
 
 - name: Kubernetes Update
-  hosts: master[1],master[2],workers
+  hosts: masters[1],masters[2],workers
   serial: 1
   become: yes
   vars_files:
