@@ -59,6 +59,14 @@ This playbook Upgrades the K8S cluster
 ansible-playbook playbooks/k8s_upgrade_all.yml -i inventory/<inventory file> -v
 ```
 
+### Tags
+
+Skip master upgrade, upgarde only master2, master3 and teh workers
+```bash
+ansible-playbook playbooks/k8s_upgrade_all.yml -i inventory/<inventory file> -v --skip-tags=master_upgrade
+```
+
+
 ### Manual steps
 
 The playbook stops at the following phases:
