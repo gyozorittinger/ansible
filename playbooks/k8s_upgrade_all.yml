@@ -1,6 +1,6 @@
 ---
 - name: Upgrade first master
-  hosts: master1
+  hosts: master[0]
   tags: master1
   become: true
   vars_files:
@@ -147,7 +147,7 @@
 
 
 - name: Kubernetes Update
-  hosts: master2,master3,workers
+  hosts: master[1],master[2],workers
   serial: 1
   become: yes
   vars_files:
