@@ -218,6 +218,7 @@
                 server {{ cluster_name }}-m2{{ cluster_sufix }} {{ master_2_ip }}:6443 check
                 server {{ cluster_name }}-m3{{ cluster_sufix }} {{ master_3_ip }}:6443 check
       when: inventory_hostname in groups["masters"]
+      tags: haproxy
 
     - name: Restart HaProxy Service
       systemd:
@@ -226,6 +227,7 @@
         enabled: yes
         daemon-reload: yes
       when: inventory_hostname in groups["masters"]
+      tags: haproxy
     
     - name: Install Keeplalived
       yum:
@@ -233,6 +235,7 @@
         state: present
         update_cache: true
       when: inventory_hostname in groups["masters"]
+      tags: keepalived
 
     - name: Create keepalived check script
       shell: |
@@ -250,10 +253,12 @@
         EOF
         chmod +x /etc/keepalived/check_apiserver.sh
       when: inventory_hostname in groups["masters"]
+      tags: keepalived
 
     - name: Backup default keepalived config
       shell: mv /etc/keepalived/keepalived.conf /etc/keepalived/keepalived.conf.old
       when: inventory_hostname in groups["masters"]
+      tags: keepalived
 
     - name: Create keepalived config on master1
       shell: |
@@ -287,6 +292,7 @@
             }
         }
       when: inventory_hostname == groups.masters[0]
+      tags: keepalived
     
     - name: Create keepalived config on master2
       shell: |
@@ -320,6 +326,7 @@
             }
         }
       when: inventory_hostname == groups.masters[1]
+      tags: keepalived
 
 
     - name: Create keepalived config on master3
@@ -354,6 +361,7 @@
             }
         }
       when: inventory_hostname == groups.masters[2]
+      tags: keepalived
 
     - name: Create keepalived user
       ansible.builtin.user:
@@ -361,6 +369,7 @@
         shell: /bin/bash
         createhome: no
       when: inventory_hostname in groups["masters"]
+      tags: keepalived
       tags: keepalived
     
     - name: Restart Keepalived service
@@ -370,6 +379,7 @@
         enabled: yes
         daemon-reload: yes
       when: inventory_hostname in groups["masters"]
+      tags: keepalived
     
     - name: Disable Firewall Service
       systemd:
