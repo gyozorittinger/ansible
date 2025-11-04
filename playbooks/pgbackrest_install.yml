@@ -28,11 +28,13 @@
         Host *
            StrictHostKeyChecking accept-new
         EOF
+      tags: ssh-key-copy
 
     - name: Add public key to authorized keys
       shell: |
         echo "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBBEkWipLA9AmsmdCyOZgAFQdQVq40RcFHhvGW/w3RanqQo7m6o6TGmBXD+HLAkPqN087LvGj3kCN4sPLBXLbJ8M= root@ora-8-percona-m" >> /root/.ssh/authorized_keys
       when: inventory_hostname in groups["backrest"]
+      tags: ssh-key-copy
     
     - name: Create PgBackrest config on backrest node
       shell: |
