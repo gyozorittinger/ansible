@@ -66,6 +66,10 @@ Skip master upgrade, upgarde only master2, master3 and teh workers
 ansible-playbook playbooks/k8s_upgrade_all.yml -i inventory/<inventory file> -v --skip-tags master_upgrade
 ```
 
+Skip Calico upgrade
+```bash
+ansible-playbook playbooks/k8s_upgrade_all.yml -i inventory/<inventory file> -v --skip-tags calico
+```
 
 ### Manual steps
 

@@ -80,56 +80,56 @@
       get_url:
         url: https://raw.githubusercontent.com/projectcalico/calico/v{{ calico_current_version }}/manifests/calico.yaml
         dest: /tmp/calico.yaml
-      tags: master_upgrade
+      tags: master_upgrade,calico
 
     - name: Remmove current Calico version
       shell: |
         kubectl delete -f /tmp/calico.yaml
       environment:
         KUBECONFIG: /etc/kubernetes/admin.conf
-      tags: master_upgrade
+      tags: master_upgrade,calico
 
     - name: Wait for Calico
       ansible.builtin.wait_for:
         timeout: 60
-      tags: master_upgrade
+      tags: master_upgrade,calico
 
     - name: Download Calico manifest
       get_url:
         url: https://raw.githubusercontent.com/projectcalico/calico/v{{ calico_new_version }}/manifests/calico.yaml
         dest: /tmp/calico.yaml
-      tags: master_upgrade
+      tags: master_upgrade,calico
 
     - name: Set custom pod CIDR in Calico manifest
       replace:
         path: /tmp/calico.yaml
         regexp: '# - name: CALICO_IPV4POOL_CIDR'
         replace: '- name: CALICO_IPV4POOL_CIDR'
-      tags: master_upgrade
+      tags: master_upgrade,calico
 
     - name: Set custom pod CIDR in Calico manifest
       replace:
         path: /tmp/calico.yaml
         regexp: '#   value: "192\.168\.0\.0/16'
         replace: '  value: "{{ pod_cidr_addr }}'
-      tags: master_upgrade
+      tags: master_upgrade,calico
 
     - name: Prompt
       ansible.builtin.pause:
         prompt: "Check calico.yaml: {{ inventory_hostname }}"
-      tags: master_upgrade
+      tags: master_upgrade,calico
 
     - name: Apply Calico CNI with updated CIDR
       shell: |
         kubectl apply -f /tmp/calico.yaml
       environment:
         KUBECONFIG: /etc/kubernetes/admin.conf
-      tags: master_upgrade
+      tags: master_upgrade,calico
 
     - name: Wait for Calico
       ansible.builtin.wait_for:
         timeout: 60
-      tags: master_upgrade
+      tags: master_upgrade,calico
 
     - name: Versionloct packages
       community.general.yum_versionlock:

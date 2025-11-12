@@ -92,7 +92,7 @@ pgbackrest_install.yml
 ansible-playbook playbooks/pgbackrest_install.yml -i inventory/percona -v
 ```
 
-###Tags
+### Tags
 
 Skip ssh key copy
 ```bash
