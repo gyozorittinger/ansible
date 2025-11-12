@@ -27,6 +27,25 @@ calico_new_version: 3.30.1
 pod_cidr_addr: 172.16.0.0/16
 ```
 
+### How to get versions
+
+Calico version:
+```bash
+calicotcl version
+```
+Output:
+```bash
+[mklk@mck-prod-k8s-m1 ~]$ calicoctl version
+Client Version:    v3.29.3
+Git commit:        b5d7d74c1
+Cluster Version:   v3.29.3
+Cluster Type:      k8s,bgp,kubeadm,kdd
+```
+You need the Cluster version
+
+To get the Kubernetes versions check this site:
+https://kubernetes.io/releases/
+
 ### Inventory file
 
 ```bash
