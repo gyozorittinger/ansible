@@ -87,6 +87,7 @@
         kubectl delete -f /tmp/calico.yaml
       environment:
         KUBECONFIG: /etc/kubernetes/admin.conf
+      ignore_errors: yes
       tags: master_upgrade,calico
 
     - name: Wait for Calico
