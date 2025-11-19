@@ -1,5 +1,5 @@
 - name: Initialize first master
-  hosts: master1
+  hosts: masters[0]
   become: true
   vars_files:
   - ../vars/k8s_install_vars.yml
@@ -59,7 +59,7 @@
 
 
 - name: Join other masters
-  hosts: master2,master3
+  hosts: masters[1],masters[2]
   become: true
   tasks:
     - name: Run control plane join command
