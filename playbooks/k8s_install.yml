@@ -64,7 +64,8 @@
   become: true
   tasks:
     - name: Run control plane join command
-      shell: "{{ hostvars['masters[0]']['control_plane_join'] }} --control-plane"
+      shell: "{{ hostvars['master1']['control_plane_join'] }} --control-plane"
+
 
 - name: Join worker nodes
   hosts: workers
