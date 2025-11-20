@@ -596,7 +596,7 @@
       when: inventory_hostname in groups["backrest"]
 
     - name: Versionloct packages
-      community.general.yum_versionlock:
+      community.general.dnf_versionlock:
         state: present
         name:
          - etcd

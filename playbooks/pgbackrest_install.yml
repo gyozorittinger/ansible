@@ -201,8 +201,8 @@
         daemon-reload: yes
       when: inventory_hostname in groups["pgnodes"]
 
-    - name: Versionloct packages
-      community.general.yum_versionlock:
+    - name: Versionloc packages
+      community.general.dnf_versionlock:
         state: present
         name:
          - percona-pgbackrest
