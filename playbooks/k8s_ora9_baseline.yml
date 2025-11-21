@@ -276,6 +276,8 @@
         }
 
         vrrp_instance VI_1 {
+            garp_master_refresh 60
+            garp_master_delay 1
             state MASTER
             interface {{ interface_name }}
             virtual_router_id {{ virtual_router_id }}   
@@ -310,6 +312,8 @@
         }
 
         vrrp_instance VI_1 {
+            garp_master_refresh 60
+            garp_master_delay 1
             state BACKUP
             interface {{ interface_name }}
             virtual_router_id {{ virtual_router_id }}   
@@ -345,6 +349,8 @@
         }
 
         vrrp_instance VI_1 {
+            garp_master_refresh 60
+            garp_master_delay 1
             state BACKUP
             interface {{ interface_name }}
             virtual_router_id {{ virtual_router_id }}   
@@ -401,6 +407,12 @@
         state: present
         update_cache: true
 
+
+    - name: Install nfs-utils
+      yum:
+        name: nfs-utils
+        state: present
+        update_cache: true
 
 
     - name: Install Kubeadm
