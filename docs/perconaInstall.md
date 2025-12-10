@@ -51,7 +51,7 @@ loop_wait: 10
 maximum_lag_on_failover: 1048576
 postgresql:
   parameters:
-    archive_command: pgbackrest --stanza=cluster_1 archive-push /var/lib/pgsql/data/pg_wal/%f
+    archive_command: pgbackrest --stanza=cluster_1 archive-push /database/pg_wal/%f
     archive_mode: true
     archive_timeout: 600s
     hot_standby: true

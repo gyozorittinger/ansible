@@ -602,13 +602,6 @@
       when: inventory_hostname in groups["backrest"]
 
     - name: Versionloct packages
-      community.general.dnf_versionlock:
-        state: present
-        name:
-         - etcd
-         - percona-postgresql{{ percona_version }}
-         - percona-haproxy
-         - percona-patroni
-         - python3-ydiff
-         - ydiff
+      shell: |
+        yum versionlock etcd percona-postgresql{{ percona_version }} percona-haproxy percona-patroni python3-ydiff ydiff
       when: inventory_hostname in groups["pgnodes"]

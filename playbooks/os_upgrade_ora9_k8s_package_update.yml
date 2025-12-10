@@ -5,15 +5,8 @@
     state: present
 
 - name: "Lock packages"
-  community.general.yum_versionlock:
-    state: present
-    name:
-      - kubeadm
-      - kubelet
-      - kubectl
-      - kubernetes-cni
-      - cri-tools
-      - containerd.io
+  shell: |
+    yum versionlock kubeadm kubelet kubectl kubernetes-cni cri-tools containerd.io
 
 - name: "Check packages"
   shell: |
