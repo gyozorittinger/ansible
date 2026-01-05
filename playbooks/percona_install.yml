@@ -19,10 +19,12 @@
         cmd: "needs-restarting -r -s"
       register: needs_restarting
       changed_when: needs_restarting.rc == 1
+      tags: reboot
 
     - name: do reboot if needed
       ansible.builtin.reboot:
       when: needs_restarting.rc == 1
+      tags: reboot
 
     - name: Disable Firewall Service
       systemd:
@@ -50,8 +52,8 @@
         EOF
     
     - name: Disable SELinux
-      ansible.posix.selinux:
-        state: disabled
+      shell: |
+        setenforce 0
     
     - name: Install Yum Versionlock
       yum:
@@ -386,7 +388,7 @@
       shell: | 
         cat <<EOF> /etc/haproxy/haproxy.cfg
         global
-            maxconn 100
+            maxconn 5000
 
         defaults
             log global
@@ -408,9 +410,9 @@
             option httpchk /primary
             http-check expect status 200
             default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
-            server node1 node1:5432 maxconn 100 check port 8008
-            server node2 node2:5432 maxconn 100 check port 8008
-            server node3 node3:5432 maxconn 100 check port 8008
+            server node1 node1:5432 maxconn 5000 check port 8008
+            server node2 node2:5432 maxconn 5000 check port 8008
+            server node3 node3:5432 maxconn 5000 check port 8008
 
         listen standbys
             balance roundrobin
@@ -418,9 +420,9 @@
             option httpchk /replica
             http-check expect status 200
             default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
-            server node1 node1:5432 maxconn 100 check port 8008
-            server node2 node2:5432 maxconn 100 check port 8008
-            server node3 node3:5432 maxconn 100 check port 8008
+            server node1 node1:5432 maxconn 5000 check port 8008
+            server node2 node2:5432 maxconn 5000 check port 8008
+            server node3 node3:5432 maxconn 5000 check port 8008
         EOF
       when: inventory_hostname in groups["pgnodes"]
 
@@ -443,17 +445,15 @@
       shell: |
         cat <<EOF > /etc/keepalived/check_apiserver.sh
         #!/bin/sh
-        APISERVER_VIP={{ percona_vip_ip }}
-        APISERVER_DEST_PORT=7000
 
         errorExit() {
           echo "*** $*" 1>&2
           exit 1
         }
 
-        curl --silent --max-time 2 http://localhost:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET http://localhost:${APISERVER_DEST_PORT}/"
-        if ip addr | grep -q ${APISERVER_VIP}; then
-          curl --silent --max-time 2 http://${APISERVER_VIP}:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET http://${APISERVER_VIP}:${APISERVER_DEST_PORT}/"
+        curl --silent --max-time 2 http://localhost:7000/ -o /dev/null || errorExit "Error GET http://localhost:7000/"
+        if ip addr | grep -q {{ percona_vip_ip }}; then
+          curl --silent --max-time 2 http://{{ percona_vip_ip }}:7000/ -o /dev/null || errorExit "Error GET http://{{ percona_vip_ip }}:7000/"
         fi
         EOF
         chmod +x /etc/keepalived/check_apiserver.sh
@@ -469,6 +469,7 @@
       shell: |
         cat <<EOF > /etc/keepalived/keepalived.conf
         global_defs {
+            enable_script_security
             router_id LVS_DEVEL
         }
         vrrp_script check_apiserver {
@@ -480,6 +481,8 @@
         }
 
         vrrp_instance VI_1 {
+            garp_master_refresh 60
+            garp_master_delay 1
             state MASTER
             interface {{ interface_name }}
             virtual_router_id {{ virtual_router_id }}
@@ -503,6 +506,7 @@
       shell: |
         cat <<EOF > /etc/keepalived/keepalived.conf
         global_defs {
+            enable_script_security
             router_id LVS_DEVEL
         }
         vrrp_script check_apiserver {
@@ -514,6 +518,8 @@
         }
 
         vrrp_instance VI_1 {
+            garp_master_refresh 60
+            garp_master_delay 1
             state BACKUP
             interface {{ interface_name }}
             virtual_router_id {{ virtual_router_id }}
@@ -538,6 +544,7 @@
       shell: |
         cat <<EOF > /etc/keepalived/keepalived.conf
         global_defs {
+            enable_script_security
             router_id LVS_DEVEL
         }
         vrrp_script check_apiserver {
@@ -549,6 +556,8 @@
         }
 
         vrrp_instance VI_1 {
+            garp_master_refresh 60
+            garp_master_delay 1
             state BACKUP
             interface {{ interface_name }}
             virtual_router_id {{ virtual_router_id }}
@@ -593,13 +602,6 @@
       when: inventory_hostname in groups["backrest"]
 
     - name: Versionloct packages
-      community.general.yum_versionlock:
-        state: present
-        name:
-         - etcd
-         - percona-postgresql{{ percona_version }}
-         - percona-haproxy
-         - percona-patroni
-         - python3-ydiff
-         - ydiff
+      shell: |
+        yum versionlock etcd percona-postgresql{{ percona_version }} percona-haproxy percona-patroni python3-ydiff ydiff
       when: inventory_hostname in groups["pgnodes"]

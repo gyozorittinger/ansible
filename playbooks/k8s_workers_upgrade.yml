@@ -49,12 +49,5 @@
         systemctl daemon-reload && sudo systemctl restart kubelet
 
     - name: Versionloct packages
-      community.general.yum_versionlock:
-        state: present
-        name:
-          - kubeadm
-          - kubelet
-          - kubectl
-          - kubernetes-cni
-          - containerd.io
-          - cri-tools
+      shell: |
+        yum versionlock kubeadm kubelet kubectl kubernetes-cni containerd.io cri-tools

@@ -14,15 +14,28 @@
         name: yum-utils
         state: present
 
+    - name: install wget if needed
+      yum:
+        name: wget
+        state: present
+
+    - name: Get K9S RPM and Install
+      shell: |
+        wget https://github.com/derailed/k9s/releases/download/v0.40.10/k9s_linux_amd64.rpm -O /tmp/k9s_linux_amd64.rpm
+        rpm -i /tmp/k9s_linux_amd64.rpm
+      tags: k9s
+
     - name: check if reboot is required
       ansible.builtin.shell:
         cmd: "needs-restarting -r -s"
       register: needs_restarting
       changed_when: needs_restarting.rc == 1
+      tags: reboot
 
     - name: do reboot if needed
       ansible.builtin.reboot:
       when: needs_restarting.rc == 1
+      tags: reboot
 
     - name: Disable SWAP
       shell: |
@@ -214,7 +227,11 @@
                 server {{ cluster_name }}-m2{{ cluster_sufix }} {{ master_2_ip }}:6443 check
                 server {{ cluster_name }}-m3{{ cluster_sufix }} {{ master_3_ip }}:6443 check
       when: inventory_hostname in groups["masters"]
+<<<<<<< HEAD
       tags: masters
+=======
+      tags: haproxy
+>>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
 
     - name: Restart HaProxy Service
       systemd:
@@ -223,7 +240,11 @@
         enabled: yes
         daemon-reload: yes
       when: inventory_hostname in groups["masters"]
+<<<<<<< HEAD
       tags: masters
+=======
+      tags: haproxy
+>>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
     
     - name: Install Keeplalived
       yum:
@@ -231,37 +252,48 @@
         state: present
         update_cache: true
       when: inventory_hostname in groups["masters"]
+<<<<<<< HEAD
       tags: masters
+=======
+      tags: keepalived
+>>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
 
     - name: Create keepalived check script
       shell: |
         cat <<EOF > /etc/keepalived/check_apiserver.sh
         #!/bin/sh
-        APISERVER_VIP={{ apiserver_vip }}
-        APISERVER_DEST_PORT=6443
-
         errorExit() {
             echo "*** $*" 1>&2
             exit 1
         }
 
-        curl --silent --max-time 2 --insecure https://localhost:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET https://localhost:${APISERVER_DEST_PORT}/"
-        if ip addr | grep -q ${APISERVER_VIP}; then
-            curl --silent --max-time 2 --insecure https://${APISERVER_VIP}:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET https://${APISERVER_VIP}:${APISERVER_DEST_PORT}/"
+        curl --silent --max-time 2 --insecure https://localhost:6443/ -o /dev/null || errorExit "Error GET https://localhost:6443/"
+        if ip addr | grep -q {{ apiserver_vip }}; then
+            curl --silent --max-time 2 --insecure https://{{ apiserver_vip }}:6443/ -o /dev/null || errorExit "Error GET https://{{ apiserver_vip }}:6443/"
         fi
+        EOF
         chmod +x /etc/keepalived/check_apiserver.sh
       when: inventory_hostname in groups["masters"]
+<<<<<<< HEAD
       tags: masters
+=======
+      tags: keepalived
+>>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
 
     - name: Backup default keepalived config
       shell: mv /etc/keepalived/keepalived.conf /etc/keepalived/keepalived.conf.old
       when: inventory_hostname in groups["masters"]
+<<<<<<< HEAD
       tags: masters
+=======
+      tags: keepalived
+>>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
 
     - name: Create keepalived config on master1
       shell: |
         cat <<EOF > /etc/keepalived/keepalived.conf
         global_defs {
+            enable_script_security
             router_id LVS_DEVEL
         }
         vrrp_script check_apiserver {
@@ -273,6 +305,8 @@
         }
 
         vrrp_instance VI_1 {
+            garp_master_refresh 60
+            garp_master_delay 1
             state MASTER
             interface {{ interface_name }}
             virtual_router_id {{ virtual_router_id }}   
@@ -289,12 +323,17 @@
             }
         }
       when: inventory_hostname == groups.masters[0]
+<<<<<<< HEAD
       tags: masters
+=======
+      tags: keepalived
+>>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
     
     - name: Create keepalived config on master2
       shell: |
         cat <<EOF > /etc/keepalived/keepalived.conf
         global_defs {
+            enable_script_security
             router_id LVS_DEVEL
         }
         vrrp_script check_apiserver {
@@ -306,6 +345,8 @@
         }
 
         vrrp_instance VI_1 {
+            garp_master_refresh 60
+            garp_master_delay 1
             state BACKUP
             interface {{ interface_name }}
             virtual_router_id {{ virtual_router_id }}   
@@ -322,13 +363,18 @@
             }
         }
       when: inventory_hostname == groups.masters[1]
+<<<<<<< HEAD
       tags: masters
+=======
+      tags: keepalived
+>>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
 
 
     - name: Create keepalived config on master3
       shell: |
         cat <<EOF > /etc/keepalived/keepalived.conf
         global_defs {
+            enable_script_security
             router_id LVS_DEVEL
         }
         vrrp_script check_apiserver {
@@ -340,6 +386,8 @@
         }
 
         vrrp_instance VI_1 {
+            garp_master_refresh 60
+            garp_master_delay 1
             state BACKUP
             interface {{ interface_name }}
             virtual_router_id {{ virtual_router_id }}   
@@ -356,7 +404,11 @@
             }
         }
       when: inventory_hostname == groups.masters[2]
+<<<<<<< HEAD
       tags: masters
+=======
+      tags: keepalived
+>>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
 
     - name: Create keepalived user
       ansible.builtin.user:
@@ -364,7 +416,12 @@
         shell: /bin/bash
         createhome: no
       when: inventory_hostname in groups["masters"]
+<<<<<<< HEAD
       tags: keepalived, masters
+=======
+      tags: keepalived
+      tags: keepalived
+>>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
     
     - name: Restart Keepalived service
       systemd:
@@ -373,7 +430,11 @@
         enabled: yes
         daemon-reload: yes
       when: inventory_hostname in groups["masters"]
+<<<<<<< HEAD
       tags: masters
+=======
+      tags: keepalived
+>>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
     
     - name: Disable Firewall Service
       systemd:
@@ -395,6 +456,12 @@
         state: present
         update_cache: true
 
+
+    - name: Install nfs-utils
+      yum:
+        name: nfs-utils
+        state: present
+        update_cache: true
 
 
     - name: Install Kubeadm
@@ -438,15 +505,13 @@
         state: present
 
     - name: Versionloct packages
-      community.general.yum_versionlock:
-        state: present
-        name:
-          - kubeadm
-          - kubelet
-          - kubectl
-          - kubernetes-cni
-          - cri-tools
+      shell: |
+        yum versionlock kubeadm kubelet kubectl kubernetes-cni cri-tools
 
     - name: Reboot
       reboot:
+<<<<<<< HEAD
       tags: masters
+=======
+      tags: reboot
+>>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
