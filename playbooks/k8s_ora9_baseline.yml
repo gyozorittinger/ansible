@@ -150,10 +150,12 @@
         state: present
         update_cache: true
       when: inventory_hostname in groups["masters"]
+      tags: masters
 
     - name: Backup default haproxy config
       shell: mv /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.old
       when: inventory_hostname in groups["masters"]
+      tags: masters
 
     - name: Create haproxy config
       shell: |
@@ -212,6 +214,7 @@
                 server {{ cluster_name }}-m2{{ cluster_sufix }} {{ master_2_ip }}:6443 check
                 server {{ cluster_name }}-m3{{ cluster_sufix }} {{ master_3_ip }}:6443 check
       when: inventory_hostname in groups["masters"]
+      tags: masters
 
     - name: Restart HaProxy Service
       systemd:
@@ -220,6 +223,7 @@
         enabled: yes
         daemon-reload: yes
       when: inventory_hostname in groups["masters"]
+      tags: masters
     
     - name: Install Keeplalived
       yum:
@@ -227,6 +231,7 @@
         state: present
         update_cache: true
       when: inventory_hostname in groups["masters"]
+      tags: masters
 
     - name: Create keepalived check script
       shell: |
@@ -246,10 +251,12 @@
         fi
         chmod +x /etc/keepalived/check_apiserver.sh
       when: inventory_hostname in groups["masters"]
+      tags: masters
 
     - name: Backup default keepalived config
       shell: mv /etc/keepalived/keepalived.conf /etc/keepalived/keepalived.conf.old
       when: inventory_hostname in groups["masters"]
+      tags: masters
 
     - name: Create keepalived config on master1
       shell: |
@@ -282,6 +289,7 @@
             }
         }
       when: inventory_hostname == groups.masters[0]
+      tags: masters
     
     - name: Create keepalived config on master2
       shell: |
@@ -314,6 +322,7 @@
             }
         }
       when: inventory_hostname == groups.masters[1]
+      tags: masters
 
 
     - name: Create keepalived config on master3
@@ -347,6 +356,7 @@
             }
         }
       when: inventory_hostname == groups.masters[2]
+      tags: masters
 
     - name: Create keepalived user
       ansible.builtin.user:
@@ -354,7 +364,7 @@
         shell: /bin/bash
         createhome: no
       when: inventory_hostname in groups["masters"]
-      tags: keepalived
+      tags: keepalived, masters
     
     - name: Restart Keepalived service
       systemd:
@@ -363,6 +373,7 @@
         enabled: yes
         daemon-reload: yes
       when: inventory_hostname in groups["masters"]
+      tags: masters
     
     - name: Disable Firewall Service
       systemd:
@@ -438,3 +449,4 @@
 
     - name: Reboot
       reboot:
+      tags: masters
