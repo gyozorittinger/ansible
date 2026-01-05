@@ -35,6 +35,11 @@ Don't reboot node after update
 ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v --skip-tags reboot
 ```
 
+Don't configure masters (Adding new worker nodes)
+```bash
+ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v --skip-tags masters
+```
+
 You can use multiple tags in a run.
 
 ## Install
