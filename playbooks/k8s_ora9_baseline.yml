@@ -227,11 +227,7 @@
                 server {{ cluster_name }}-m2{{ cluster_sufix }} {{ master_2_ip }}:6443 check
                 server {{ cluster_name }}-m3{{ cluster_sufix }} {{ master_3_ip }}:6443 check
       when: inventory_hostname in groups["masters"]
-<<<<<<< HEAD
-      tags: masters
-=======
-      tags: haproxy
->>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
+      tags: masters,haproxy
 
     - name: Restart HaProxy Service
       systemd:
@@ -240,11 +236,7 @@
         enabled: yes
         daemon-reload: yes
       when: inventory_hostname in groups["masters"]
-<<<<<<< HEAD
-      tags: masters
-=======
-      tags: haproxy
->>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
+      tags: master,haproxy
     
     - name: Install Keeplalived
       yum:
@@ -252,11 +244,7 @@
         state: present
         update_cache: true
       when: inventory_hostname in groups["masters"]
-<<<<<<< HEAD
-      tags: masters
-=======
-      tags: keepalived
->>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
+      tags: masters,keepalived
 
     - name: Create keepalived check script
       shell: |
@@ -274,20 +262,12 @@
         EOF
         chmod +x /etc/keepalived/check_apiserver.sh
       when: inventory_hostname in groups["masters"]
-<<<<<<< HEAD
-      tags: masters
-=======
-      tags: keepalived
->>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
+      tags: masters,keepalived
 
     - name: Backup default keepalived config
       shell: mv /etc/keepalived/keepalived.conf /etc/keepalived/keepalived.conf.old
       when: inventory_hostname in groups["masters"]
-<<<<<<< HEAD
-      tags: masters
-=======
-      tags: keepalived
->>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
+      tags: masters,keepalived
 
     - name: Create keepalived config on master1
       shell: |
@@ -323,11 +303,7 @@
             }
         }
       when: inventory_hostname == groups.masters[0]
-<<<<<<< HEAD
-      tags: masters
-=======
-      tags: keepalived
->>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
+      tags: masters,keepalived
     
     - name: Create keepalived config on master2
       shell: |
@@ -363,11 +339,7 @@
             }
         }
       when: inventory_hostname == groups.masters[1]
-<<<<<<< HEAD
-      tags: masters
-=======
-      tags: keepalived
->>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
+      tags: masters,keepalived
 
 
     - name: Create keepalived config on master3
@@ -404,11 +376,7 @@
             }
         }
       when: inventory_hostname == groups.masters[2]
-<<<<<<< HEAD
-      tags: masters
-=======
-      tags: keepalived
->>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
+      tags: masters,keepalived
 
     - name: Create keepalived user
       ansible.builtin.user:
@@ -416,12 +384,7 @@
         shell: /bin/bash
         createhome: no
       when: inventory_hostname in groups["masters"]
-<<<<<<< HEAD
-      tags: keepalived, masters
-=======
-      tags: keepalived
-      tags: keepalived
->>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
+      tags: keepalived,masters
     
     - name: Restart Keepalived service
       systemd:
@@ -430,11 +393,7 @@
         enabled: yes
         daemon-reload: yes
       when: inventory_hostname in groups["masters"]
-<<<<<<< HEAD
-      tags: masters
-=======
-      tags: keepalived
->>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
+      tags: masters,keepalived
     
     - name: Disable Firewall Service
       systemd:
@@ -510,8 +469,4 @@
 
     - name: Reboot
       reboot:
-<<<<<<< HEAD
-      tags: masters
-=======
       tags: reboot
->>>>>>> fde78f43e753da2a8a9a6257a404d1a78e063cc4
