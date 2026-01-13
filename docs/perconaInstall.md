@@ -94,12 +94,20 @@ ansible-playbook playbooks/pgbackrest_install.yml -i inventory/percona -v
 
 ### Tags
 
-Skip ssh key copy
+Skip ssh key copy:
 ```bash
 
 
 ansible-playbook playbooks/pgbackrest_install.yml -i inventory/percona -v --skip-tags ssh-key-copy
 ```
+
+Create certs:
+```bash
+
+ansible-playbook playbooks/pgbackrest_install.yml -i inventory/percona -v --tags pgbackrest-certs
+
+```
+
 ## Step 4: Create Stanza and configure scheduled backup
 
 On BGBackrest server:

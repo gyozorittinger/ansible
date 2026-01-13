@@ -127,6 +127,7 @@
         chown postgres:postgres -R ${CA_PATH}
         chmod 0600 ${CA_PATH}/*
       when: inventory_hostname in groups["backrest"]
+      tags: pgbackrest-certs
 
     - name: Create PgBacrest Service on backrest node
       shell: |
