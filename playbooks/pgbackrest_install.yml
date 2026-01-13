@@ -193,6 +193,7 @@
 
         EOF
       when: inventory_hostname in groups["pgnodes"]
+      tags: pgbackrest-certs
 
     - name: Start pgBackrest service on node1 node2 node3
       systemd:
@@ -201,6 +202,7 @@
         enabled: yes
         daemon-reload: yes
       when: inventory_hostname in groups["pgnodes"]
+      tags: pgbackrest-certs
 
     - name: Versionloc packages
       community.general.dnf_versionlock:
