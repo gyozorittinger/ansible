@@ -8,6 +8,7 @@
     - name: Updates
       yum:
         update_cache: yes
+      tags: os-update
 
     - name: install yum-utils if needed
       yum:
@@ -150,7 +151,7 @@
     - name: Disable Selinux in config
       shell: |
         cat <<EOF > /etc/selinux/config
-        SELINUX=deisabled
+        SELINUX=disabled
         SELINUXTYPE=targeted
 
     - name: Disable Selinux in config
