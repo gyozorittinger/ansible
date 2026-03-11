@@ -204,6 +204,7 @@
         {{ kube_override_hostname|default(inventory_hostname) }}
       delegate_to: "{{ groups['masters'][0] }}"
       changed_when: false
+      tags: uncordon
 
     - name: Versionloct packages
       shell: |
