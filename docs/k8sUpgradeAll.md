@@ -90,6 +90,11 @@ Skip Calico upgrade
 ansible-playbook playbooks/k8s_upgrade_all.yml -i inventory/<inventory file> -v --skip-tags calico
 ```
 
+Skip uncordon
+```bash
+ansible-playbook playbooks/k8s_upgrade_all.yml -i inventory/<inventory file> -v --skip-tags uncordon
+```
+
 ### Manual steps
 
 The playbook stops at the following phases:
