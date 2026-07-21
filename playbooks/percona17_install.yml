@@ -109,6 +109,12 @@
         name: percona-haproxy
         state: present
       when: inventory_hostname in groups["pgnodes"]
+    
+    - name: Install Patroni-Postgres-Server
+      yum:
+        name: percona-postgresql{{ percona_version }}-server
+        state: present
+      when: inventory_hostname in groups["pgnodes"]
 
     - name: Install Extension
       yum:
