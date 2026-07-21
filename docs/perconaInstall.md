@@ -23,7 +23,7 @@ vars/percona_install_vars.yml
 ### Usage
 
 ```bash
-ansible-playbook playbooks/percona_install.yml -i inventory/percona -v
+ansible-playbook playbooks/percona17_install.yml -i inventory/percona -v
 ```
 
 ### Tags
@@ -32,17 +32,27 @@ You can skip some steps with tags:
 
 Don't install keepalived
 ```bash
-ansible-playbook playbooks/percona_install.yml -i inventory/percona -v --skip-tags keepalived_script,keepalived
+ansible-playbook playbooks/percona17_install.yml -i inventory/percona -v --skip-tags keepalived_script,keepalived
+```
+
+Don't install ETCD
+```bash
+ansible-playbook playbooks/percona17_install.yml -i inventory/percona -v --skip-tags etcd
+```
+
+Don't install YDIFF
+```bash
+ansible-playbook playbooks/percona17_install.yml -i inventory/percona -v --skip-tags ydiff
 ```
 
 Skip reboot after update:
 ```bash
-ansible-playbook playbooks/percona_install.yml -i inventory/percona -v --skip-tags reboot
+ansible-playbook playbooks/percona17_install.yml -i inventory/percona -v --skip-tags reboot
 ```
 
 Skip Disable Selinux (Use if already disabled Selinux on the node):
 ```bash
-ansible-playbook playbooks/percona_install.yml -i inventory/percona -v --skip-tags selinux
+ansible-playbook playbooks/percona17_install.yml -i inventory/percona -v --skip-tags selinux
 ```
 
 ## Step 2: Modify Percona Cluster config
