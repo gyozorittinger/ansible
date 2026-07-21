@@ -464,7 +464,7 @@
         name: yum-plugin-versionlock
         state: present
 
-    - name: Versionloct packages
+    - name: Versionlock packages
       shell: |
         yum versionlock kubeadm kubelet kubectl kubernetes-cni cri-tools
 

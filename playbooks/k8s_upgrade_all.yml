@@ -132,7 +132,7 @@
         timeout: 60
       tags: master_upgrade,calico
 
-    - name: Versionloct packages
+    - name: Versionlock packages
       shell: |
         yum versionlock kubeadm kubelet kubectl kubernetes-cni containerd.io cri-tools
       tags: master_upgrade
@@ -206,6 +206,6 @@
       changed_when: false
       tags: uncordon
 
-    - name: Versionloct packages
+    - name: Versionlock packages
       shell: |
         yum versionlock kubeadm kubelet kubectl kubernetes-cni containerd.io cri-tools

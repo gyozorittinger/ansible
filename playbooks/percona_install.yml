@@ -594,14 +594,14 @@
       when: inventory_hostname in groups["pgnodes"]
       tags: keepalived
     
-    - name: Versionloct packages
+    - name: Versionlock packages
       community.general.yum_versionlock:
         state: present
         name:
          - percona-pgbackrest
       when: inventory_hostname in groups["backrest"]
 
-    - name: Versionloct packages
+    - name: Versionlock packages
       shell: |
         yum versionlock etcd percona-postgresql{{ percona_version }} percona-haproxy percona-patroni python3-ydiff ydiff
       when: inventory_hostname in groups["pgnodes"]
