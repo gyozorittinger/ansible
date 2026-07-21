@@ -50,10 +50,12 @@
         SELINUX=deisabled
         SELINUXTYPE=targeted
         EOF
+      tags: selinux
     
     - name: Disable SELinux
       shell: |
         setenforce 0
+      tags: selinux
     
     - name: Install Yum Versionlock
       yum:

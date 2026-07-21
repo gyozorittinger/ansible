@@ -40,6 +40,11 @@ Skip reboot after update:
 ansible-playbook playbooks/percona_install.yml -i inventory/percona -v --skip-tags reboot
 ```
 
+Skip Disable Selinux (Use if already disabled Selinux on the node):
+```bash
+ansible-playbook playbooks/percona_install.yml -i inventory/percona -v --skip-tags selinux
+```
+
 ## Step 2: Modify Percona Cluster config
 
 ```bash
