@@ -10,6 +10,13 @@ This playbook installs the required components like
 - Kurenetes binaries (kubeadm, kubectl, cri)
 - Containerd
 
+### Variables
+
+Playbook | Var file
+--- | --- |
+Baseline | vars/k8s_ora9_baseline_vars.yml
+k8s | vars/k8s_install_vars.yml
+
 ### Usage
 
 ```bash
@@ -19,6 +26,11 @@ ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v
 ### Tags
 
 You can skip some steps with tags:
+
+If already disables Selinux:
+```bash
+ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v --skip-tags selinux
+```
 
 Don't install k9s client
 ```bash

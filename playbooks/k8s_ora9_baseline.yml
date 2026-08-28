@@ -153,10 +153,12 @@
         cat <<EOF > /etc/selinux/config
         SELINUX=disabled
         SELINUXTYPE=targeted
+      tags: selinux
 
     - name: Disable Selinux in config
       shell: |
         setenforce 0
+      tags: selinux
 
     - name: Install Haproxy
       yum:
