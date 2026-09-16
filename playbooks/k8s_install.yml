@@ -79,4 +79,47 @@
     - name: Join worker node
       shell: "{{ worker_join_cmd.stdout }}"
 
+- name: Install KubeVIP
+  hosts: masters[0]
+  become: true
+  tasks:
+    - name: Get latest kube-vip version
+      ansible.builtin.shell: |
+        set -o pipefail
+        curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases \
+          | jq -r '.[0].name'
+      args:
+        executable: /bin/bash
+      register: kube_vip_version
+      changed_when: false
+    
+    - name: Pull kube-vip container image
+      ansible.builtin.command:
+        cmd: >
+          ctr image pull
+          ghcr.io/kube-vip/kube-vip:{{ kube_vip_version.stdout }}
 
+    - name: Generate kube-vip DaemonSet manifest
+      ansible.builtin.shell: |
+        ctr run --rm --net-host \
+          ghcr.io/kube-vip/kube-vip:{{ kube_vip_version.stdout }} \
+          vip /kube-vip manifest daemonset \
+          --interface {{ kube_vip_interface }} \
+          --address {{ kube_vip_vip }} \
+          --inCluster \
+          --taint \
+          --controlplane \
+          --services \
+          --arp \
+          --leaderElection \
+          > /tmp/kube-vip-daemonset.yaml
+      args:
+        executable: /bin/bash
+
+    - name: Apply kube-vip DaemonSet
+      ansible.builtin.command:
+        cmd: kubectl apply -f /tmp/kube-vip-daemonset.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+
+  tags: kubevip
