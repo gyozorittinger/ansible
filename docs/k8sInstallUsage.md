@@ -19,7 +19,7 @@ k8s | vars/k8s_install_vars.yml
 
 ### Usage
 
-###!!!Importanat change!!!
+### !!!Importanat change!!!
 
 If you were to use KubeVIP instead of Keepalived, run the baseline with skip-tags: keepalived.
 If you want use keepalived you have to run the install playbook with skip-tags: kubevip.
