@@ -82,7 +82,15 @@
 - name: Install KubeVIP
   hosts: masters[0]
   become: true
+  vars_files:
+  - ../vars/k8s_install_vars.yml
   tasks:
+    - name: Set RBAC for kube-vip
+      ansible.builtin.command:
+        cmd: >
+          kubectl apply -f https://kube-vip.io/manifests/rbac.yaml
+          
+
     - name: Get latest kube-vip version
       ansible.builtin.shell: |
         set -o pipefail

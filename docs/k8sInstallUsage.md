@@ -21,7 +21,7 @@ k8s | vars/k8s_install_vars.yml
 
 ### !!!Important change!!!
 
-If you were to use **KubeVIP** instead of Keepalived, run the baseline with skip-tags: **keepalived**.
+If you were to use **KubeVIP** instead of Keepalived, run the baseline with skip-tags: **keepalived**. In this case set the loadbalancer_ip in var file to master1's IP address
 
 If you want use **keepalived** you have to run the install playbook with skip-tags: **kubevip**.
 

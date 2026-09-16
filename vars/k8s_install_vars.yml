@@ -5,7 +5,7 @@ pod_cidr_addr: 172.16.0.0/16
 calico_version: 3.32.1
 
 # K8S VIP IP address
-loadbalancer_ip: 192.168.73.177
+loadbalancer_ip: 192.168.73.170
 
 #KubeVIP IP address
 kube_vip_vip: 192.168.73.177
