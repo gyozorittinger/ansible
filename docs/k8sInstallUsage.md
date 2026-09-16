@@ -21,9 +21,9 @@ k8s | vars/k8s_install_vars.yml
 
 ### !!!Important change!!!
 
-If you were to use KubeVIP instead of Keepalived, run the baseline with skip-tags: keepalived.
+If you were to use **KubeVIP** instead of Keepalived, run the baseline with skip-tags: **keepalived**.
 
-If you want use keepalived you have to run the install playbook with skip-tags: kubevip.
+If you want use **keepalived** you have to run the install playbook with skip-tags: **kubevip**.
 
 ```bash
 ansible-playbook playbooks/k8s_ora9_baseline.yml -i inventory/k8s_init_aml11 -v
