@@ -208,4 +208,4 @@
 
     - name: Versionlock packages
       shell: |
-        yum versionlock kubeadm kubelet kubectl kubernetes-cni containerd.io cri-tools
+        yum versionlock kubeadm kubelet kubectl kubernetes-cni cri-tools
