@@ -6,7 +6,7 @@
 
 - name: "Lock packages"
   shell: |
-    yum versionlock kubeadm kubelet kubectl kubernetes-cni cri-tools containerd.io
+    yum versionlock kubeadm kubelet kubectl kubernetes-cni cri-tools
 
 - name: "Check packages"
   shell: |
