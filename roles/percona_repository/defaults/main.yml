@@ -3,3 +3,5 @@ percona_version: 16
 
 percona_release_url: >-
   https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+  percona_gpg_key_url: https://repo.percona.com/yum/PERCONA-PACKAGING-KEY
+  percona_gpg_key_fingerprint: "4D1BB29D63D98E422B2113B19334A25F8507EFA5"
