@@ -47,7 +47,7 @@
     - name: Disable Selinux in config
       shell: |
         cat <<EOF > /etc/selinux/config
-        SELINUX=deisabled
+        SELINUX=disabled
         SELINUXTYPE=targeted
         EOF
       tags: selinux
