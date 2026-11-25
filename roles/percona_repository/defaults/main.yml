@@ -1,0 +1,5 @@
+---
+percona_version: 16
+
+percona_release_url: >-
+  https://repo.percona.com/yum/percona-release-latest.noarch.rpm

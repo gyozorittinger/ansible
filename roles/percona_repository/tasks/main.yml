@@ -1,0 +1,44 @@
+---
+- name: Validate operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "OracleLinux"
+      - ansible_distribution_major_version in ['8', '9', '10']
+    fail_msg: "Unsupported operating system"
+
+- name: Install Oracle EPEL repository
+  ansible.builtin.dnf:
+    name: "oracle-epel-release-el{{ ansible_distribution_major_version }}"
+    state: present
+
+- name: Install Percona release package
+  ansible.builtin.dnf:
+    name: "{{ percona_release_url }}"
+    state: present
+    disable_gpg_check: false
+
+- name: Check enabled repositories
+  ansible.builtin.command:
+    cmd: dnf repolist --enabled
+  register: enabled_repositories
+  changed_when: false
+  check_mode: false
+
+- name: Disable PostgreSQL DNF module on OL8 and OL9
+  ansible.builtin.command:
+    cmd: dnf -y module disable postgresql
+  when:
+    - ansible_distribution_major_version in ['8', '9']
+    - "'ppg-' ~ percona_version ~ '-release-x86_64'
+       not in enabled_repositories.stdout"
+
+- name: Enable Percona PostgreSQL repository
+  ansible.builtin.command:
+    cmd: "percona-release setup ppg{{ percona_version }}"
+  when: >
+    'ppg-' ~ percona_version ~ '-release-x86_64'
+    not in enabled_repositories.stdout
+
+- name: Refresh DNF metadata
+  ansible.builtin.dnf:
+    update_cache: true
