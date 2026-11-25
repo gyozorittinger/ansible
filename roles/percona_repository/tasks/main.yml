@@ -11,6 +11,13 @@
     name: "oracle-epel-release-el{{ ansible_distribution_major_version }}"
     state: present
 
+- name: Import Percona RPM GPG key
+  ansible.builtin.rpm_key:
+    key: "{{ percona_gpg_key_url }}"
+    fingerprint: "{{ percona_gpg_key_fingerprint }}"
+    state: present
+    validate_certs: true
+
 - name: Install Percona release package
   ansible.builtin.dnf:
     name: "{{ percona_release_url }}"
