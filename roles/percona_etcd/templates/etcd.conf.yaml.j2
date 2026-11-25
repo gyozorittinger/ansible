@@ -1,0 +1,29 @@
+---
+# {{ ansible_managed }}
+
+name: "{{ inventory_hostname }}"
+
+data-dir: "{{ percona_etcd_data_dir }}"
+
+listen-client-urls: "http://127.0.0.1:{{ percona_etcd_client_port }},http://{{ percona_node_ip }}:{{ percona_etcd_client_port }}"
+
+advertise-client-urls: "http://{{ percona_node_ip }}:{{ percona_etcd_client_port }}"
+
+listen-peer-urls: "http://{{ percona_node_ip }}:{{ percona_etcd_peer_port }}"
+
+initial-advertise-peer-urls: "http://{{ percona_node_ip }}:{{ percona_etcd_peer_port }}"
+
+initial-cluster-token: "{{ percona_etcd_cluster_token }}"
+
+initial-cluster-state: "new"
+
+initial-cluster: "{% for host in groups[percona_etcd_group] %}{{ host }}=http://{{ hostvars[host].percona_node_ip }}:{{ percona_etcd_peer_port }}{% if not loop.last %},{% endif %}{% endfor %}"
+
+heartbeat-interval: {{ percona_etcd_heartbeat_interval }}
+election-timeout: {{ percona_etcd_election_timeout }}
+
+auto-compaction-mode: "{{ percona_etcd_auto_compaction_mode }}"
+auto-compaction-retention: "{{ percona_etcd_auto_compaction_retention }}"
+
+logger: zap
+log-level: info

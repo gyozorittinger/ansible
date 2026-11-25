@@ -1,8 +1,10 @@
 ---
 - name: Test Percona PostgreSQL installation
-  hosts: all
+  hosts: percona_cluster
   become: true
   gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
 
   vars:
     percona_version: 16
@@ -11,3 +13,4 @@
   roles:
     - percona_repository
     - percona_packages
+    - percona_etcd
