@@ -1,0 +1,99 @@
+---
+# {{ ansible_managed }}
+
+scope: "{{ percona_patroni_scope }}"
+namespace: "{{ percona_patroni_namespace }}"
+name: "{{ inventory_hostname }}"
+
+restapi:
+  listen: "{{ percona_node_ip }}:{{ percona_patroni_restapi_port }}"
+  connect_address: "{{ percona_node_ip }}:{{ percona_patroni_restapi_port }}"
+
+etcd3:
+  hosts:
+{% for host in groups[percona_etcd_group] %}
+    - "{{ hostvars[host].percona_node_ip }}:{{ percona_etcd_client_port }}"
+{% endfor %}
+
+bootstrap:
+  dcs:
+    ttl: {{ percona_patroni_ttl }}
+    loop_wait: {{ percona_patroni_loop_wait }}
+    retry_timeout: {{ percona_patroni_retry_timeout }}
+    maximum_lag_on_failover: {{ percona_patroni_maximum_lag_on_failover }}
+
+    synchronous_mode: {{ percona_patroni_synchronous_mode | lower }}
+    synchronous_mode_strict: {{ percona_patroni_synchronous_mode_strict | lower }}
+
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+
+      parameters:
+        max_connections: {{ percona_postgresql_max_connections }}
+        shared_buffers: "{{ percona_postgresql_shared_buffers }}"
+        effective_cache_size: "{{ percona_postgresql_effective_cache_size }}"
+        maintenance_work_mem: "{{ percona_postgresql_maintenance_work_mem }}"
+        work_mem: "{{ percona_postgresql_work_mem }}"
+
+        wal_level: "{{ percona_postgresql_wal_level }}"
+        wal_keep_size: "{{ percona_postgresql_wal_keep_size }}"
+        max_wal_senders: {{ percona_postgresql_max_wal_senders }}
+        max_replication_slots: {{ percona_postgresql_max_replication_slots }}
+
+        hot_standby: "on"
+        wal_log_hints: "on"
+        password_encryption: scram-sha-256
+
+        logging_collector: "on"
+        log_directory: log
+        log_filename: "postgresql-%Y-%m-%d.log"
+        log_rotation_age: 1d
+        log_rotation_size: 100MB
+        log_min_error_statement: error
+        log_connections: "on"
+        log_disconnections: "on"
+
+  initdb:
+    - encoding: "{{ percona_postgresql_encoding }}"
+    - locale: "{{ percona_postgresql_locale }}"
+    - data-checksums
+
+postgresql:
+  listen: "0.0.0.0:{{ percona_postgresql_port }}"
+  connect_address: "{{ percona_node_ip }}:{{ percona_postgresql_port }}"
+
+  data_dir: "{{ percona_postgresql_data_dir }}"
+  bin_dir: "{{ percona_postgresql_bin_dir }}"
+
+  authentication:
+    superuser:
+      username: "{{ percona_postgresql_superuser }}"
+      password: {{ percona_postgresql_superuser_password | to_json }}
+
+    replication:
+      username: "{{ percona_postgresql_replication_user }}"
+      password: {{ percona_postgresql_replication_password | to_json }}
+
+    rewind:
+      username: "{{ percona_postgresql_rewind_user }}"
+      password: {{ percona_postgresql_rewind_password | to_json }}
+
+  pg_hba:
+    - local all all peer
+    - host all all 127.0.0.1/32 scram-sha-256
+    - host all all ::1/128 scram-sha-256
+{% for host in groups[percona_etcd_group] %}
+    - host replication {{ percona_postgresql_replication_user }} {{ hostvars[host].percona_node_ip }}/32 scram-sha-256
+    - host all {{ percona_postgresql_superuser }} {{ hostvars[host].percona_node_ip }}/32 scram-sha-256
+    - host all {{ percona_postgresql_rewind_user }} {{ hostvars[host].percona_node_ip }}/32 scram-sha-256
+{% endfor %}
+
+  parameters:
+    unix_socket_directories: /var/run/postgresql
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false

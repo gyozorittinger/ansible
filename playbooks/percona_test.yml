@@ -14,3 +14,4 @@
     - percona_repository
     - percona_packages
     - percona_etcd
+    - percona_patroni

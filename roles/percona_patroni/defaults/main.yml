@@ -1,0 +1,46 @@
+---
+percona_version: 16
+
+percona_patroni_scope: percona-cluster
+percona_patroni_namespace: /service/
+
+percona_patroni_config_file: /etc/patroni/patroni.yml
+percona_patroni_restapi_port: 8008
+
+percona_patroni_ttl: 30
+percona_patroni_loop_wait: 10
+percona_patroni_retry_timeout: 10
+
+percona_postgresql_port: 5432
+percona_postgresql_data_dir: "/var/lib/pgsql/{{ percona_version }}/data"
+percona_postgresql_bin_dir: "/usr/pgsql-{{ percona_version }}/bin"
+
+percona_postgresql_superuser: postgres
+percona_postgresql_replication_user: replicator
+percona_postgresql_rewind_user: rewind_user
+
+percona_postgresql_max_connections: 1000
+percona_postgresql_shared_buffers: 256MB
+percona_postgresql_effective_cache_size: 768MB
+percona_postgresql_maintenance_work_mem: 64MB
+percona_postgresql_work_mem: 4MB
+
+percona_postgresql_wal_level: replica
+percona_postgresql_wal_keep_size: 1024MB
+percona_postgresql_max_wal_senders: 10
+percona_postgresql_max_replication_slots: 10
+
+percona_postgresql_encoding: UTF8
+percona_postgresql_locale: en_US.UTF-8
+
+percona_patroni_maximum_lag_on_failover: 1048576
+percona_patroni_synchronous_mode: false
+percona_patroni_synchronous_mode_strict: false
+
+# Password generation
+percona_password_length: 16
+percona_password_chars:
+  - ascii_letters
+  - digits
+
+percona_credentials_dir: "/root/.percona-credentials/{{ percona_patroni_scope }}"
