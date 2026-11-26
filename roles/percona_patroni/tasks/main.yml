@@ -82,6 +82,6 @@
   ansible.builtin.debug:
     msg:
       - "Cluster: {{ percona_patroni_scope }}"
-      - "PostgreSQL credentials saved to:"
+      - "PostgreSQL credentials saved on the Ansible control node:"
       - "{{ percona_credentials_dir }}/credentials.yml"
   run_once: true

@@ -1,0 +1,12 @@
+---
+- name: Configure SELinux
+  ansible.posix.selinux:
+    policy: targeted
+    state: "{{ percona_selinux_state }}"
+  register: percona_selinux_result
+
+- name: Reboot server if SELinux configuration requires it
+  ansible.builtin.reboot:
+    reboot_timeout: 600
+  when: percona_selinux_result.reboot_required | default(false)
+  throttle: 1

@@ -10,6 +10,7 @@
     - ../vars/percona_test_vars.yml
 
   roles:
+    - percona_baseline
     - percona_repository
     - percona_packages
     - percona_etcd
