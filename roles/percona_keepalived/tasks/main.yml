@@ -1,0 +1,40 @@
+---
+- name: Validate Keepalived configuration
+  ansible.builtin.assert:
+    that:
+      - groups[percona_keepalived_group] | length == 3
+      - percona_keepalived_interface is defined
+      - percona_keepalived_interface in ansible_interfaces
+      - percona_keepalived_vip is defined
+      - percona_keepalived_vrid | int >= 1
+      - percona_keepalived_vrid | int <= 255
+      - percona_node_ip is defined
+      - percona_keepalived_vip != percona_node_ip
+
+- name: Deploy Keepalived configuration
+  ansible.builtin.template:
+    src: keepalived.conf.j2
+    dest: "{{ percona_keepalived_config_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+    validate: "/usr/sbin/keepalived -t -f %s"
+  notify: Reload Keepalived
+
+- name: Enable and start Keepalived service
+  ansible.builtin.systemd_service:
+    name: keepalived
+    enabled: true
+    state: started
+
+- name: Apply Keepalived configuration changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Display Keepalived configuration summary
+  ansible.builtin.debug:
+    msg:
+      - "Node: {{ inventory_hostname }}"
+      - "Interface: {{ percona_keepalived_interface }}"
+      - "VIP: {{ percona_keepalived_vip }}"
+      - "VRID: {{ percona_keepalived_vrid }}"

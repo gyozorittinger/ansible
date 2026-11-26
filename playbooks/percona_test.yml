@@ -16,3 +16,4 @@
     - percona_etcd
     - percona_patroni
     - percona_haproxy
+    - percona_keepalived
