@@ -1,0 +1,58 @@
+# {{ ansible_managed }}
+
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    maxconn {{ percona_haproxy_maxconn }}
+    user haproxy
+    group haproxy
+
+defaults
+    log global
+    mode tcp
+    option tcplog
+    option dontlognull
+
+    retries 3
+
+    timeout connect {{ percona_haproxy_timeout_connect }}
+    timeout client {{ percona_haproxy_timeout_client }}
+    timeout server {{ percona_haproxy_timeout_server }}
+    timeout check {{ percona_haproxy_timeout_check }}
+
+{% if percona_haproxy_stats_enabled %}
+listen stats
+    mode http
+    bind {{ percona_haproxy_stats_address }}:{{ percona_haproxy_stats_port }}
+    stats enable
+    stats uri /stats
+    stats refresh 10s
+
+{% endif %}
+listen postgresql_rw
+    bind {{ percona_haproxy_bind_address }}:{{ percona_haproxy_rw_port }}
+    mode tcp
+
+    option httpchk GET /primary
+    http-check expect status 200
+
+    default-server inter {{ percona_haproxy_check_interval }} fall {{ percona_haproxy_check_fall }} rise {{ percona_haproxy_check_rise }} on-marked-down shutdown-sessions
+
+{% for host in groups[percona_haproxy_group] %}
+    server {{ host }} {{ hostvars[host].percona_node_ip }}:{{ percona_postgresql_port }} check port {{ percona_patroni_restapi_port }}
+{% endfor %}
+
+listen postgresql_ro
+    bind {{ percona_haproxy_bind_address }}:{{ percona_haproxy_ro_port }}
+    mode tcp
+
+    balance {{ percona_haproxy_ro_balance }}
+
+    option httpchk GET /replica
+    http-check expect status 200
+
+    default-server inter {{ percona_haproxy_check_interval }} fall {{ percona_haproxy_check_fall }} rise {{ percona_haproxy_check_rise }} on-marked-down shutdown-sessions
+
+{% for host in groups[percona_haproxy_group] %}
+    server {{ host }} {{ hostvars[host].percona_node_ip }}:{{ percona_postgresql_port }} check port {{ percona_patroni_restapi_port }}
+{% endfor %}

@@ -6,12 +6,12 @@
   strategy: linear
   any_errors_fatal: true
 
-  vars:
-    percona_version: 16
-    percona_packages_profile: cluster
+  vars_files:
+    - ../vars/percona_test_vars.yml
 
   roles:
     - percona_repository
     - percona_packages
     - percona_etcd
     - percona_patroni
+    - percona_haproxy

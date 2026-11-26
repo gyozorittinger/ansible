@@ -1,0 +1,3 @@
+---
+percona_version: 16
+percona_packages_profile: cluster
