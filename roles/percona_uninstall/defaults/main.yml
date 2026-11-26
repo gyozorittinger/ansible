@@ -1,0 +1,33 @@
+---
+percona_version: 16
+
+percona_uninstall_services:
+  - keepalived
+  - haproxy
+  - patroni
+  - "postgresql-{{ percona_version }}"
+  - pgbackrest
+  - etcd
+
+percona_uninstall_packages:
+  - "percona-postgresql{{ percona_version }}-server"
+  - "percona-postgresql{{ percona_version }}-contrib"
+  - percona-patroni
+  - percona-patroni-etcd
+  - percona-pgbackrest
+  - percona-haproxy
+  - etcd
+  - keepalived
+
+percona_uninstall_paths:
+  - /var/lib/pgsql
+  - /var/lib/etcd
+  - /var/lib/pgbackrest
+  - /var/log/pgbackrest
+  - /etc/patroni
+  - /etc/patroni_env.conf
+  - /etc/etcd
+  - /etc/haproxy
+  - /etc/keepalived
+  - /etc/pgbackrest
+  - /etc/pgbackrest.conf

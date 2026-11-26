@@ -1,0 +1,27 @@
+---
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Stop and disable Percona cluster services
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  loop: "{{ percona_uninstall_services }}"
+  when: (item ~ '.service') in ansible_facts.services
+
+- name: Remove Percona cluster packages
+  ansible.builtin.dnf:
+    name: "{{ percona_uninstall_packages }}"
+    state: absent
+    autoremove: false
+
+- name: Remove cluster data and configuration
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ percona_uninstall_paths }}"
+
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
