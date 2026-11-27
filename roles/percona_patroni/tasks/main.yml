@@ -98,10 +98,29 @@
     var: patroni_cluster_status.stdout_lines
   run_once: true
  
-- name: Display credentials file location
-  ansible.builtin.debug:
-    msg:
-      - "Cluster: {{ percona_patroni_scope }}"
-      - "PostgreSQL credentials saved on the Ansible control node:"
-      - "{{ percona_credentials_dir }}/credentials.yml"
-  run_once: true
+- name: Query actual PostgreSQL data directory
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - postgres
+      - --
+      - "{{ percona_postgresql_bin_dir }}/psql"
+      - -p
+      - "{{ percona_postgresql_port | string }}"
+      - -Atc
+      - "SHOW data_directory;"
+  register: percona_actual_data_directory
+  changed_when: false
+
+- name: Verify PostgreSQL data directory
+  ansible.builtin.assert:
+    that:
+      - percona_actual_data_directory.stdout | trim == percona_postgresql_data_dir
+    fail_msg: >-
+      Incorrect PostgreSQL data directory!
+      Expected: {{ percona_postgresql_data_dir }}
+      Actual: {{ percona_actual_data_directory.stdout | trim }}
+    success_msg: >-
+      PostgreSQL data directory verified:
+      {{ percona_actual_data_directory.stdout | trim }}

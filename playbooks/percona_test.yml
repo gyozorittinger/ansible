@@ -17,3 +17,18 @@
     - percona_patroni
     - percona_haproxy
     - percona_keepalived
+
+  post_tasks:
+    - name: Display PostgreSQL installation summary
+      ansible.builtin.debug:
+        msg:
+          - "Percona PostgreSQL cluster installation completed."
+          - "Cluster: {{ percona_patroni_scope }}"
+          - "PostgreSQL version: {{ percona_version }}"
+          - "Data directory: {{ percona_postgresql_data_dir }}"
+          - "VIP: {{ percona_keepalived_vip }}"
+          - "Read/Write: {{ percona_keepalived_vip }}:{{ percona_haproxy_rw_port }}"
+          - "Read/Only: {{ percona_keepalived_vip }}:{{ percona_haproxy_ro_port }}"
+          - "Credentials stored on the Ansible control node:"
+          - "{{ percona_credentials_dir }}/credentials.yml"
+      run_once: true
