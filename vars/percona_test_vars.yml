@@ -9,7 +9,6 @@ percona_postgresql_require_mount: true
 percona_pgbackrest_mount_point: /backup
 percona_pgbackrest_repo_path: "{{ percona_pgbackrest_mount_point }}/pgbackrest"
 percona_pgbackrest_require_mount: true
-percona_pgbackrest_repo_path: /backup/pgbackrest
 
 percona_haproxy_rw_port: 5000
 percona_haproxy_ro_port: 5001
