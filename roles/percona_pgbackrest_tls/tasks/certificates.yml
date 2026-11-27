@@ -1,0 +1,91 @@
+---
+- name: Create pgBackRest certificate directory
+  ansible.builtin.file:
+    path: "{{ percona_pgbackrest_tls_cert_dir }}"
+    state: directory
+    owner: root
+    group: "{{ percona_pgbackrest_tls_group }}"
+    mode: '0750'
+
+- name: Generate node private key
+  community.crypto.openssl_privatekey:
+    path: "{{ percona_pgbackrest_tls_cert_dir }}/server.key"
+    size: "{{ percona_pgbackrest_tls_key_size }}"
+    type: RSA
+    owner: "{{ percona_pgbackrest_tls_user }}"
+    group: "{{ percona_pgbackrest_tls_group }}"
+    mode: '0600'
+    regenerate: never
+
+- name: Generate node certificate signing request
+  community.crypto.openssl_csr:
+    path: "{{ percona_pgbackrest_tls_cert_dir }}/server.csr"
+    privatekey_path: "{{ percona_pgbackrest_tls_cert_dir }}/server.key"
+    common_name: "{{ inventory_hostname }}"
+    digest: "{{ percona_pgbackrest_tls_digest }}"
+    subject_alt_name:
+      - "DNS:{{ inventory_hostname }}"
+      - "IP:{{ percona_node_ip }}"
+    basic_constraints:
+      - "CA:FALSE"
+    basic_constraints_critical: true
+    key_usage:
+      - digitalSignature
+      - keyEncipherment
+    key_usage_critical: true
+    extended_key_usage:
+      - serverAuth
+      - clientAuth
+    owner: "{{ percona_pgbackrest_tls_user }}"
+    group: "{{ percona_pgbackrest_tls_group }}"
+    mode: '0644'
+
+- name: Fetch node certificate signing request
+  ansible.builtin.fetch:
+    src: "{{ percona_pgbackrest_tls_cert_dir }}/server.csr"
+    dest: "{{ percona_pgbackrest_tls_ca_dir }}/{{ inventory_hostname }}.csr"
+    flat: true
+
+- name: Sign node certificate with pgBackRest CA
+  community.crypto.x509_certificate:
+    path: "{{ percona_pgbackrest_tls_ca_dir }}/{{ inventory_hostname }}.crt"
+    csr_path: "{{ percona_pgbackrest_tls_ca_dir }}/{{ inventory_hostname }}.csr"
+    provider: ownca
+    ownca_path: "{{ percona_pgbackrest_tls_ca_dir }}/ca.crt"
+    ownca_privatekey_path: "{{ percona_pgbackrest_tls_ca_dir }}/ca.key"
+    ownca_digest: "{{ percona_pgbackrest_tls_digest }}"
+    ownca_not_after: "{{ percona_pgbackrest_tls_cert_validity }}"
+    ignore_timestamps: true
+    mode: '0644'
+  delegate_to: localhost
+
+- name: Deploy signed node certificate
+  ansible.builtin.copy:
+    src: "{{ percona_pgbackrest_tls_ca_dir }}/{{ inventory_hostname }}.crt"
+    dest: "{{ percona_pgbackrest_tls_cert_dir }}/server.crt"
+    owner: "{{ percona_pgbackrest_tls_user }}"
+    group: "{{ percona_pgbackrest_tls_group }}"
+    mode: '0644'
+
+- name: Deploy pgBackRest CA certificate
+  ansible.builtin.copy:
+    src: "{{ percona_pgbackrest_tls_ca_dir }}/ca.crt"
+    dest: "{{ percona_pgbackrest_tls_cert_dir }}/ca.crt"
+    owner: "{{ percona_pgbackrest_tls_user }}"
+    group: "{{ percona_pgbackrest_tls_group }}"
+    mode: '0644'
+
+- name: Verify node certificate against CA
+  ansible.builtin.command:
+    argv:
+      - openssl
+      - verify
+      - -CAfile
+      - "{{ percona_pgbackrest_tls_cert_dir }}/ca.crt"
+      - "{{ percona_pgbackrest_tls_cert_dir }}/server.crt"
+  register: percona_pgbackrest_tls_verify
+  changed_when: false
+
+- name: Display certificate verification result
+  ansible.builtin.debug:
+    msg: "{{ percona_pgbackrest_tls_verify.stdout }}"

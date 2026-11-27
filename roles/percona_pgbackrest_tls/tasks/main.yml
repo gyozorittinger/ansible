@@ -3,3 +3,6 @@
   ansible.builtin.import_tasks: ca.yml
   delegate_to: localhost
   run_once: true
+
+- name: Prepare pgBackRest node certificates
+  ansible.builtin.import_tasks: certificates.yml
