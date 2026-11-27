@@ -8,4 +8,13 @@ percona_pgbackrest_require_mount: true
 
 percona_pgbackrest_log_path: /var/log/pgbackrest
 percona_pgbackrest_tls_port: 8432
-percona_pgbackrest_stanza: ijr-stage-pgsql
+percona_pgbackrest_stanza: "{{ percona_patroni_scope }}"
+
+percona_pgbackrest_retention_full: 2
+percona_pgbackrest_retention_diff: 7
+
+percona_pgbackrest_process_max: 4
+percona_pgbackrest_compress_type: zst
+percona_pgbackrest_compress_level: 3
+percona_pgbackrest_backup_standby: "y"
+percona_pgbackrest_start_fast: "y"

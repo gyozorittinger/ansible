@@ -1,0 +1,40 @@
+# {{ ansible_managed }}
+
+[global]
+repo1-path={{ percona_pgbackrest_repo_path }}
+repo1-retention-full={{ percona_pgbackrest_retention_full }}
+repo1-retention-diff={{ percona_pgbackrest_retention_diff }}
+
+process-max={{ percona_pgbackrest_process_max }}
+compress-type={{ percona_pgbackrest_compress_type }}
+compress-level={{ percona_pgbackrest_compress_level }}
+
+backup-standby={{ percona_pgbackrest_backup_standby }}
+start-fast={{ percona_pgbackrest_start_fast }}
+
+log-path={{ percona_pgbackrest_log_path }}
+log-level-console=info
+log-level-file=detail
+
+tls-server-address={{ percona_pgbackrest_tls_address }}
+tls-server-port={{ percona_pgbackrest_tls_port }}
+tls-server-ca-file={{ percona_pgbackrest_tls_cert_dir }}/ca.crt
+tls-server-cert-file={{ percona_pgbackrest_tls_cert_dir }}/server.crt
+tls-server-key-file={{ percona_pgbackrest_tls_cert_dir }}/server.key
+
+{% for host in groups[percona_pgbackrest_cluster_group] %}
+tls-server-auth={{ host }}={{ percona_pgbackrest_stanza }}
+{% endfor %}
+
+[{{ percona_pgbackrest_stanza }}]
+{% for host in groups[percona_pgbackrest_cluster_group] %}
+pg{{ loop.index }}-host={{ hostvars[host].percona_node_ip }}
+pg{{ loop.index }}-host-type=tls
+pg{{ loop.index }}-host-port={{ percona_pgbackrest_tls_port }}
+pg{{ loop.index }}-host-ca-file={{ percona_pgbackrest_tls_cert_dir }}/ca.crt
+pg{{ loop.index }}-host-cert-file={{ percona_pgbackrest_tls_cert_dir }}/server.crt
+pg{{ loop.index }}-host-key-file={{ percona_pgbackrest_tls_cert_dir }}/server.key
+pg{{ loop.index }}-path={{ percona_postgresql_data_dir }}
+pg{{ loop.index }}-port={{ percona_postgresql_port }}
+
+{% endfor %}
