@@ -11,6 +11,11 @@ percona_pgbackrest_archive_command: >-
   --stanza={{ percona_pgbackrest_stanza }}
   archive-push %p
 
+percona_pgbackrest_restore_command: >-
+  {{ percona_pgbackrest_binary }}
+  --stanza={{ percona_pgbackrest_stanza }}
+  archive-get %f %p
+
 percona_patroni_config_file: /etc/patroni/patroni.yml
 percona_patroni_restapi_port: 8008
 

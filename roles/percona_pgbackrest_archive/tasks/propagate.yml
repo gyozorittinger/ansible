@@ -16,6 +16,7 @@
         SELECT json_build_object(
           'archive_mode', current_setting('archive_mode'),
           'archive_command', current_setting('archive_command'),
+          'restore_command', current_setting('restore_command'),
           'archive_timeout_seconds',
           (SELECT setting::integer FROM pg_settings
            WHERE name = 'archive_timeout'),
@@ -33,6 +34,9 @@
     - >-
       archive_settings.archive_timeout_seconds | int ==
       percona_pgbackrest_archive_timeout | regex_replace('s$', '') | int
+    - >-
+      archive_settings.restore_command ==
+      percona_pgbackrest_restore_command
     - >-
       (
         archive_settings.archive_mode == percona_pgbackrest_archive_mode

@@ -16,6 +16,7 @@
         SELECT json_build_object(
           'archive_mode', current_setting('archive_mode'),
           'archive_command', current_setting('archive_command'),
+          'restore_command', current_setting('restore_command'),
           'archive_timeout', current_setting('archive_timeout'),
           'archive_timeout_seconds',
           (SELECT setting::integer FROM pg_settings
@@ -29,6 +30,7 @@
     that:
       - effective_config.archive_mode == percona_pgbackrest_archive_mode
       - effective_config.archive_command == percona_pgbackrest_archive_command
+      - effective_config.restore_command == percona_pgbackrest_restore_command
       - effective_config.archive_timeout_seconds | int == expected_timeout_seconds | int
     fail_msg: >-
       PostgreSQL archive configuration is incorrect

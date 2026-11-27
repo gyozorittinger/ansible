@@ -13,6 +13,7 @@
       archive_mode: "{{ percona_pgbackrest_archive_mode }}"
       archive_command: "{{ percona_pgbackrest_archive_command }}"
       archive_timeout: "{{ percona_pgbackrest_archive_timeout }}"
+      restore_command: "{{ percona_pgbackrest_restore_command }}"
 
 - name: Determine whether archive configuration requires modification
   ansible.builtin.set_fact:
@@ -26,6 +27,9 @@
         or
         patroni_archive_current_config.json.postgresql.parameters.archive_timeout
           | default('0') | string != percona_pgbackrest_archive_timeout
+        or
+        patroni_archive_current_config.json.postgresql.parameters.restore_command
+          | default('') != percona_pgbackrest_restore_command
       }}
 
 - name: Update Patroni dynamic archive configuration
@@ -55,5 +59,6 @@
       - patroni_archive_updated_config.json.postgresql.parameters.archive_mode == percona_pgbackrest_archive_mode
       - patroni_archive_updated_config.json.postgresql.parameters.archive_command == percona_pgbackrest_archive_command
       - patroni_archive_updated_config.json.postgresql.parameters.archive_timeout | string == percona_pgbackrest_archive_timeout
+      - patroni_archive_updated_config.json.postgresql.parameters.restore_command == percona_pgbackrest_restore_command
     success_msg: "Patroni archive configuration is correct."
     fail_msg: "Patroni archive configuration validation failed."
