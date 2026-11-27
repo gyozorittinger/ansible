@@ -28,3 +28,5 @@ percona_pgbackrest_archive_allowed_restart_parameters:
 
 percona_pgbackrest_archive_config_retries: 30
 percona_pgbackrest_archive_config_retry_delay: 5
+
+percona_postgresql_port: 5432

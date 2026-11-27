@@ -1,6 +1,8 @@
 ---
 percona_version: 16
 
+percona_postgresql_port: 5432
+
 # Operating system baseline
 percona_selinux_state: disabled
 percona_baseline_allow_reboot: false
