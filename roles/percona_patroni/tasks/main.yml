@@ -1,4 +1,24 @@
 ---
+- name: Verify dedicated database filesystem is mounted
+  ansible.builtin.command:
+    argv:
+      - mountpoint
+      - -q
+      - "{{ percona_postgresql_mount_point }}"
+  register: database_mount_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: percona_postgresql_require_mount | bool
+
+- name: Ensure database filesystem is available
+  ansible.builtin.assert:
+    that:
+      - database_mount_check.rc == 0
+    fail_msg: "ERROR: {{ percona_postgresql_mount_point }} is not mounted. Aborting installation."
+    success_msg: "Dedicated database filesystem is mounted."
+  when: percona_postgresql_require_mount | bool
+
 - name: Prepare PostgreSQL credentials
   ansible.builtin.import_tasks: credentials.yml
 

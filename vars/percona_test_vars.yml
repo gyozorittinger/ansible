@@ -1,3 +1,12 @@
 ---
 percona_version: 16
 percona_packages_profile: cluster
+
+percona_postgresql_mount_point: /database
+percona_postgresql_data_dir: "{{ percona_postgresql_mount_point }}/pg{{ percona_version }}data"
+percona_postgresql_require_mount: true
+
+percona_pgbackrest_mount_point: /backup
+percona_pgbackrest_repo_path: "{{ percona_pgbackrest_mount_point }}/pgbackrest"
+percona_pgbackrest_require_mount: true
+percona_pgbackrest_repo_path: /backup/pgbackrest

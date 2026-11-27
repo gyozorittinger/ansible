@@ -12,8 +12,10 @@ percona_patroni_loop_wait: 10
 percona_patroni_retry_timeout: 10
 
 percona_postgresql_port: 5432
-percona_postgresql_data_dir: "/var/lib/pgsql/{{ percona_version }}/data"
+percona_postgresql_data_dir: "{{ percona_postgresql_mount_point }}/pg{{ percona_version }}data"
 percona_postgresql_bin_dir: "/usr/pgsql-{{ percona_version }}/bin"
+percona_postgresql_mount_point: /database
+percona_postgresql_require_mount: true
 
 percona_postgresql_superuser: postgres
 percona_postgresql_replication_user: replicator
