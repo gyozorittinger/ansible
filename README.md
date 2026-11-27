@@ -74,4 +74,3 @@ The previous Percona installation playbooks remain available for reference.
 - Some playbooks perform destructive operations. Always verify the target inventory before execution.
 - Preserve generated credentials and certificates securely.
 - Consult the solution-specific documentation for tested platforms, prerequisites and known limitations.
-

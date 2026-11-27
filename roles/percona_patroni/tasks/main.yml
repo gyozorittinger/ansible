@@ -97,7 +97,7 @@
   ansible.builtin.debug:
     var: patroni_cluster_status.stdout_lines
   run_once: true
- 
+
 - name: Query actual PostgreSQL data directory
   ansible.builtin.command:
     argv:

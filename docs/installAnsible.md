@@ -270,4 +270,3 @@ executable when installing or updating packages.
   configured collection paths and are not necessarily
   isolated by the Python virtual environment.
 - Validate collection compatibility before upgrading.
-

@@ -273,4 +273,3 @@ ansible-playbook219 -i inventory/percona-ha.yaml playbooks/percona_ha_uninstall.
 - [Percona HA with Patroni](https://docs.percona.com/postgresql/16/solutions/ha-patroni.html)
 - [Ansible documentation](https://docs.ansible.com/)
 - [Administration Guide](adminPerconaHA.md)
-

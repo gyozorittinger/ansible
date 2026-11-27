@@ -410,4 +410,3 @@ sudo -u postgres pgbackrest --stanza=example-pgsql --type=incr backup
 - [pgBackRest documentation](https://pgbackrest.org/user-guide.html)
 - [PostgreSQL 16 documentation](https://www.postgresql.org/docs/16/)
 - [etcd documentation](https://etcd.io/docs/)
-
