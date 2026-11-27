@@ -1,6 +1,10 @@
 ---
 percona_version: 16
 
+# Operating system baseline
+percona_selinux_state: disabled
+percona_baseline_allow_reboot: false
+
 percona_postgresql_mount_point: /database
 percona_postgresql_data_dir: "{{ percona_postgresql_mount_point }}/pg{{ percona_version }}data"
 percona_postgresql_require_mount: true

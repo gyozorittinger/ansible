@@ -10,11 +10,24 @@
     - ../vars/percona_ha_vars.yml
     - ../vars/percona_ha_pgbackrest_vars.yml
 
+  roles:
+    - percona_baseline
+
+- name: Install pgBackRest packages on all nodes
+  hosts: percona_cluster:percona_backup
+  become: true
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
+
+  vars_files:
+    - ../vars/percona_ha_vars.yml
+    - ../vars/percona_ha_pgbackrest_vars.yml
+
   vars:
     percona_packages_profile: backup
 
   roles:
-    - percona_baseline
     - percona_repository
     - percona_packages
 
