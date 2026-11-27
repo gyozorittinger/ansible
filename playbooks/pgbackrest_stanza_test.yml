@@ -1,0 +1,14 @@
+---
+- name: Initialize pgBackRest stanza
+  hosts: percona_backup
+  become: true
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
+
+  vars_files:
+    - ../vars/percona_test_vars.yml
+    - ../vars/pgbackrest_test_vars.yml
+
+  roles:
+    - percona_pgbackrest_stanza

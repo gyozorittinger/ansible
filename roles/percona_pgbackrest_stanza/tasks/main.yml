@@ -1,0 +1,58 @@
+---
+- name: Verify dedicated backup filesystem is mounted
+  ansible.builtin.command:
+    argv:
+      - mountpoint
+      - -q
+      - "{{ percona_pgbackrest_mount_point }}"
+  register: pgbackrest_stanza_mount_check
+  changed_when: false
+  when: percona_pgbackrest_require_mount | bool
+
+- name: Initialize pgBackRest stanza
+  ansible.builtin.command:
+    argv:
+      - "{{ percona_pgbackrest_binary }}"
+      - "--stanza={{ percona_pgbackrest_stanza }}"
+      - "--log-level-console=info"
+      - stanza-create
+  become: true
+  become_user: "{{ percona_pgbackrest_user }}"
+  register: pgbackrest_stanza_create
+  until: pgbackrest_stanza_create.rc == 0
+  retries: "{{ percona_pgbackrest_stanza_retries }}"
+  delay: "{{ percona_pgbackrest_stanza_retry_delay }}"
+  changed_when: >-
+    'already exists' not in
+    (pgbackrest_stanza_create.stdout | lower)
+
+- name: Query pgBackRest stanza information
+  ansible.builtin.command:
+    argv:
+      - "{{ percona_pgbackrest_binary }}"
+      - "--stanza={{ percona_pgbackrest_stanza }}"
+      - "--output=json"
+      - info
+  become: true
+  become_user: "{{ percona_pgbackrest_user }}"
+  register: pgbackrest_stanza_info
+  changed_when: false
+
+- name: Validate pgBackRest stanza
+  ansible.builtin.assert:
+    that:
+      - pgbackrest_stanza_data | length == 1
+      - pgbackrest_stanza_data[0].name == percona_pgbackrest_stanza
+      - pgbackrest_stanza_data[0].db | length > 0
+      - pgbackrest_stanza_data[0].status.code in [0, 2]
+    fail_msg: "pgBackRest stanza validation failed."
+    success_msg: "pgBackRest stanza successfully initialized."
+  vars:
+    pgbackrest_stanza_data: "{{ pgbackrest_stanza_info.stdout | from_json }}"
+
+- name: Display pgBackRest stanza summary
+  ansible.builtin.debug:
+    msg:
+      - "pgBackRest stanza initialization completed."
+      - "Server: {{ inventory_hostname }}"
+      - "Stanza: {{ percona_pgbackrest_stanza }}"
