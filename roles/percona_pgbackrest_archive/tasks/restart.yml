@@ -35,6 +35,28 @@
   retries: "{{ percona_pgbackrest_archive_config_retries }}"
   delay: "{{ percona_pgbackrest_archive_config_retry_delay }}"
 
+- name: Identify current leader and replicas
+  ansible.builtin.set_fact:
+    patroni_archive_leaders: >-
+      {{
+        patroni_archive_cluster.json.members
+        | selectattr('role', 'equalto', 'leader')
+        | list
+      }}
+    patroni_archive_replicas: >-
+      {{
+        patroni_archive_cluster.json.members
+        | selectattr('role', 'equalto', 'replica')
+        | list
+      }}
+    patroni_archive_pending_members: >-
+      {{
+        patroni_archive_cluster.json.members
+        | selectattr('pending_restart', 'defined')
+        | selectattr('pending_restart', 'equalto', true)
+        | list
+      }}
+
 - name: Validate Patroni cluster topology
   ansible.builtin.assert:
     that:
