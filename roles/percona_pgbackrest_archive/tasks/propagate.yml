@@ -8,6 +8,8 @@
       - --
       - "/usr/pgsql-{{ percona_version }}/bin/psql"
       - -X
+      - -p
+      - "{{ percona_postgresql_port | string }}"
       - -At
       - -c
       - >-
@@ -28,13 +30,21 @@
       {{ patroni_archive_propagation.stdout | from_json }}
   until:
     - patroni_archive_propagation.rc == 0
-    - archive_settings.archive_command == percona_pgbackrest_archive_command
     - >-
       archive_settings.archive_timeout_seconds | int ==
       percona_pgbackrest_archive_timeout | regex_replace('s$', '') | int
     - >-
-      archive_settings.archive_mode == percona_pgbackrest_archive_mode
-      or archive_settings.archive_mode_pending | bool
+      (
+        archive_settings.archive_mode == percona_pgbackrest_archive_mode
+        and
+        archive_settings.archive_command == percona_pgbackrest_archive_command
+      )
+      or
+      (
+        archive_settings.archive_mode != percona_pgbackrest_archive_mode
+        and
+        archive_settings.archive_mode_pending | bool
+      )
   retries: "{{ percona_pgbackrest_archive_config_retries }}"
   delay: "{{ percona_pgbackrest_archive_config_retry_delay }}"
 

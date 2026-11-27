@@ -1,4 +1,10 @@
 ---
+- name: Install Python cryptography dependency
+  ansible.builtin.dnf:
+    name: python3-cryptography
+    state: present
+    install_weak_deps: false
+
 - name: Prepare pgBackRest certificate authority
   ansible.builtin.import_tasks: ca.yml
   delegate_to: localhost
