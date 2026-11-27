@@ -16,3 +16,6 @@
 - name: Perform leader switchover if required
   ansible.builtin.import_tasks: switchover.yml
   run_once: true
+
+- name: Verify PostgreSQL WAL archiving
+  ansible.builtin.import_tasks: verify.yml
