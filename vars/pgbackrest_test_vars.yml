@@ -18,3 +18,7 @@ percona_pgbackrest_compress_type: zst
 percona_pgbackrest_compress_level: 3
 percona_pgbackrest_backup_standby: "y"
 percona_pgbackrest_start_fast: "y"
+
+# PostgreSQL WAL archiving
+percona_pgbackrest_archive_mode: "on"
+percona_pgbackrest_archive_timeout: "60s"

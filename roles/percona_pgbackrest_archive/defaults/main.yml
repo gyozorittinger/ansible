@@ -1,0 +1,18 @@
+---
+percona_pgbackrest_stanza: "{{ percona_patroni_scope }}"
+
+percona_pgbackrest_archive_mode: "on"
+percona_pgbackrest_archive_timeout: "60s"
+
+percona_pgbackrest_binary: /usr/bin/pgbackrest
+
+percona_pgbackrest_archive_command: >-
+  {{ percona_pgbackrest_binary }}
+  --stanza={{ percona_pgbackrest_stanza }}
+  archive-push %p
+
+percona_patroni_config_file: /etc/patroni/patroni.yml
+percona_patroni_restapi_port: 8008
+
+percona_pgbackrest_archive_restart_retries: 60
+percona_pgbackrest_archive_restart_delay: 5

@@ -1,0 +1,4 @@
+---
+- name: Configure Patroni WAL archiving
+  ansible.builtin.import_tasks: configure.yml
+  run_once: true
