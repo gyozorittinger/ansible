@@ -1,0 +1,14 @@
+---
+- name: Configure pgBackRest on PostgreSQL nodes
+  hosts: percona_cluster
+  become: true
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
+
+  vars_files:
+    - ../vars/percona_test_vars.yml
+    - ../vars/pgbackrest_test_vars.yml
+
+  roles:
+    - percona_pgbackrest_client
