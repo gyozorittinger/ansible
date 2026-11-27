@@ -26,6 +26,37 @@
       Member {{ patroni_restart_member }} is not a healthy replica.
       Rolling restart aborted.
 
+- name: Read current restart requirements from target member
+  ansible.builtin.uri:
+    url: "{{ patroni_archive_target.api_url }}"
+    method: GET
+    status_code: 200
+  register: patroni_archive_target_status
+
+- name: Validate restart reasons immediately before restart
+  ansible.builtin.assert:
+    that:
+      - patroni_archive_target_status.json.role == 'replica'
+      - patroni_archive_target_status.json.state == 'running'
+      - restart_parameters | length > 0
+      - unexpected_restart_parameters | length == 0
+    fail_msg: >-
+      Unsafe restart conditions detected on
+      {{ patroni_restart_member }}.
+      Automatic restart aborted.
+  vars:
+    restart_parameters: >-
+      {{
+        patroni_archive_target_status.json.pending_restart_reason
+        | default({}) | list
+      }}
+    unexpected_restart_parameters: >-
+      {{
+        restart_parameters
+        | difference(percona_pgbackrest_archive_allowed_restart_parameters)
+      }}
+  when: patroni_archive_target_status.json.pending_restart | default(false) | bool
+
 - name: Restart replica with pending configuration changes
   ansible.builtin.command:
     argv:
@@ -37,7 +68,7 @@
       - "{{ patroni_restart_member }}"
       - --pending
       - --force
-  when: patroni_archive_target.pending_restart | default(false) | bool
+  when: patroni_archive_target_status.json.pending_restart | default(false) | bool
   register: patroni_archive_member_restart
   changed_when: true
 

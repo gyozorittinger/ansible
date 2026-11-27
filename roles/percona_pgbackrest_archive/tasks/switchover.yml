@@ -77,6 +77,29 @@
           - "Current leader: {{ patroni_archive_old_leader }}"
           - "New leader: {{ patroni_archive_candidate }}"
 
+    - name: Verify candidate eligibility immediately before switchover
+      ansible.builtin.uri:
+        url: >-
+          http://{{ hostvars[patroni_archive_candidate].percona_node_ip }}:{{ percona_patroni_restapi_port }}/replica?lag={{ percona_pgbackrest_archive_max_replica_lag }}
+        method: GET
+        status_code: 200
+      register: patroni_archive_candidate_health
+
+    - name: Read candidate restart requirements
+      ansible.builtin.uri:
+        url: >-
+          http://{{ hostvars[patroni_archive_candidate].percona_node_ip }}:{{ percona_patroni_restapi_port }}/patroni
+        method: GET
+        status_code: 200
+      register: patroni_archive_candidate_status
+
+    - name: Ensure candidate has no pending restart
+      ansible.builtin.assert:
+        that:
+          - patroni_archive_candidate_status.json.role == 'replica'
+          - not (patroni_archive_candidate_status.json.pending_restart | default(false) | bool)
+        fail_msg: "Switchover candidate is not ready."
+
     - name: Execute Patroni switchover
       ansible.builtin.command:
         argv:
