@@ -1,0 +1,132 @@
+---
+- name: Read cluster state before potential switchover
+  ansible.builtin.uri:
+    url: "{{ patroni_archive_api_url }}/cluster"
+    method: GET
+    status_code: 200
+  register: patroni_archive_before_switchover
+
+- name: Identify current leader and replicas
+  ansible.builtin.set_fact:
+    patroni_archive_current_leaders: >-
+      {{
+        patroni_archive_before_switchover.json.members
+        | selectattr('role', 'equalto', 'leader')
+        | list
+      }}
+    patroni_archive_current_replicas: >-
+      {{
+        patroni_archive_before_switchover.json.members
+        | selectattr('role', 'equalto', 'replica')
+        | list
+      }}
+
+- name: Validate cluster topology before switchover
+  ansible.builtin.assert:
+    that:
+      - patroni_archive_current_leaders | length == 1
+      - patroni_archive_current_replicas | length == 2
+      - patroni_archive_current_leaders[0].state == 'running'
+
+- name: Determine whether leader requires restart
+  ansible.builtin.set_fact:
+    patroni_archive_leader_pending: >-
+      {{
+        patroni_archive_current_leaders[0].pending_restart
+        | default(false) | bool
+      }}
+
+- name: Perform controlled switchover
+  when: patroni_archive_leader_pending | bool
+  block:
+
+    - name: Ensure automatic switchover is allowed
+      ansible.builtin.assert:
+        that:
+          - percona_pgbackrest_archive_allow_switchover | bool
+        fail_msg: >-
+          Leader requires restart, but automatic switchover
+          is disabled.
+
+    - name: Validate replica health before switchover
+      ansible.builtin.assert:
+        that:
+          - item.state == 'streaming'
+          - item.lag | default(-1) | int >= 0
+          - item.lag | int <= percona_pgbackrest_archive_max_replica_lag | int
+          - not (item.pending_restart | default(false) | bool)
+        fail_msg: "Replica {{ item.name }} is not ready."
+      loop: "{{ patroni_archive_current_replicas }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Select switchover candidate
+      ansible.builtin.set_fact:
+        patroni_archive_old_leader: >-
+          {{ patroni_archive_current_leaders[0].name }}
+        patroni_archive_candidate: >-
+          {{
+            (patroni_archive_current_replicas
+            | sort(attribute='lag')
+            | first).name
+          }}
+
+    - name: Display planned switchover
+      ansible.builtin.debug:
+        msg:
+          - "Current leader: {{ patroni_archive_old_leader }}"
+          - "New leader: {{ patroni_archive_candidate }}"
+
+    - name: Execute Patroni switchover
+      ansible.builtin.command:
+        argv:
+          - patronictl
+          - -c
+          - "{{ percona_patroni_config_file }}"
+          - switchover
+          - "{{ percona_patroni_scope }}"
+          - --leader
+          - "{{ patroni_archive_old_leader }}"
+          - --candidate
+          - "{{ patroni_archive_candidate }}"
+          - --force
+      changed_when: true
+
+    - name: Wait for new leader and former leader recovery
+      ansible.builtin.uri:
+        url: "{{ patroni_archive_api_url }}/cluster"
+        method: GET
+        status_code: 200
+      register: patroni_archive_switchover_health
+      vars:
+        new_leader: >-
+          {{
+            patroni_archive_switchover_health.json.members
+            | selectattr('name', 'equalto', patroni_archive_candidate)
+            | first | default({})
+          }}
+        old_leader: >-
+          {{
+            patroni_archive_switchover_health.json.members
+            | selectattr('name', 'equalto', patroni_archive_old_leader)
+            | first | default({})
+          }}
+      until:
+        - new_leader.role | default('') == 'leader'
+        - new_leader.state | default('') == 'running'
+        - old_leader.role | default('') == 'replica'
+        - old_leader.state | default('') == 'streaming'
+        - old_leader.lag | default(-1) | int >= 0
+        - old_leader.lag | int <= percona_pgbackrest_archive_max_replica_lag | int
+      retries: "{{ percona_pgbackrest_archive_restart_retries }}"
+      delay: "{{ percona_pgbackrest_archive_restart_delay }}"
+
+    - name: Restart former leader if required
+      ansible.builtin.include_tasks: restart_member.yml
+      vars:
+        patroni_restart_member: "{{ patroni_archive_old_leader }}"
+
+- name: Display message when no switchover is required
+  ansible.builtin.debug:
+    msg: "No Patroni switchover is required."
+  when: not (patroni_archive_leader_pending | bool)

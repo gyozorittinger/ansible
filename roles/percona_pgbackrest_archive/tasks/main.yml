@@ -12,3 +12,7 @@
 - name: Perform rolling PostgreSQL restart
   ansible.builtin.import_tasks: restart.yml
   run_once: true
+
+- name: Perform leader switchover if required
+  ansible.builtin.import_tasks: switchover.yml
+  run_once: true
