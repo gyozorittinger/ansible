@@ -1,6 +1,5 @@
 ---
 percona_version: 16
-percona_packages_profile: backup
 
 percona_pgbackrest_mount_point: /backup
 percona_pgbackrest_repo_path: "{{ percona_pgbackrest_mount_point }}/pgbackrest"

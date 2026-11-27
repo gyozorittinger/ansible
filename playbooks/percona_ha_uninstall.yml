@@ -7,7 +7,7 @@
   any_errors_fatal: true
 
   vars_files:
-    - ../vars/percona_test_vars.yml
+    - ../vars/percona_ha_vars.yml
 
   pre_tasks:
     - name: Confirm destructive operation

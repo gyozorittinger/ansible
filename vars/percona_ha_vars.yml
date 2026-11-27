@@ -1,6 +1,5 @@
 ---
 percona_version: 16
-percona_packages_profile: cluster
 
 percona_postgresql_mount_point: /database
 percona_postgresql_data_dir: "{{ percona_postgresql_mount_point }}/pg{{ percona_version }}data"

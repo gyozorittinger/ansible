@@ -1,0 +1,53 @@
+---
+- name: Install Percona PostgreSQL HA cluster
+  hosts: percona_cluster
+  become: true
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
+
+  vars_files:
+    - ../vars/percona_ha_vars.yml
+
+  vars:
+    percona_packages_profile: cluster
+
+  roles:
+    - percona_baseline
+    - percona_repository
+    - percona_packages
+    - percona_etcd
+    - percona_patroni
+    - percona_haproxy
+    - percona_keepalived
+
+- name: Install pgBackRest infrastructure
+  ansible.builtin.import_playbook: percona_ha_pgbackrest_install.yml
+
+- name: Display Percona HA installation summary
+  hosts: percona_cluster
+  become: true
+  gather_facts: false
+
+  vars_files:
+    - ../vars/percona_ha_vars.yml
+    - ../vars/percona_ha_pgbackrest_vars.yml
+
+  tasks:
+    - name: Display installation summary
+      ansible.builtin.debug:
+        msg:
+          - "Percona PostgreSQL HA installation completed."
+          - "Cluster: {{ percona_patroni_scope }}"
+          - "PostgreSQL version: {{ percona_version }}"
+          - "Database directory: {{ percona_postgresql_data_dir }}"
+          - "Virtual IP: {{ percona_keepalived_vip }}"
+          - "Read-write port: {{ percona_haproxy_rw_port }}"
+          - "Read-only port: {{ percona_haproxy_ro_port }}"
+          - "Credentials: {{ percona_credentials_dir }}/credentials.yml"
+          - "Backup server: {{ groups['percona_backup'][0] }}"
+          - "Backup repository: {{ percona_pgbackrest_repo_path }}"
+          - "pgBackRest stanza: {{ percona_pgbackrest_stanza }}"
+          - "WAL archiving: configured and verified"
+          - "Backup scheduling: manual configuration required"
+      run_once: true

@@ -1,0 +1,89 @@
+---
+- name: Prepare pgBackRest backup server
+  hosts: percona_backup
+  become: true
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
+
+  vars_files:
+    - ../vars/percona_ha_vars.yml
+    - ../vars/percona_ha_pgbackrest_vars.yml
+
+  vars:
+    percona_packages_profile: backup
+
+  roles:
+    - percona_baseline
+    - percona_repository
+    - percona_packages
+
+- name: Configure pgBackRest TLS infrastructure
+  hosts: percona_cluster:percona_backup
+  become: true
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
+
+  vars_files:
+    - ../vars/percona_ha_vars.yml
+    - ../vars/percona_ha_pgbackrest_vars.yml
+
+  roles:
+    - percona_pgbackrest_tls
+
+- name: Configure pgBackRest backup server
+  hosts: percona_backup
+  become: true
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
+
+  vars_files:
+    - ../vars/percona_ha_vars.yml
+    - ../vars/percona_ha_pgbackrest_vars.yml
+
+  roles:
+    - percona_pgbackrest_server
+
+- name: Configure pgBackRest database clients
+  hosts: percona_cluster
+  become: true
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
+
+  vars_files:
+    - ../vars/percona_ha_vars.yml
+    - ../vars/percona_ha_pgbackrest_vars.yml
+
+  roles:
+    - percona_pgbackrest_client
+
+- name: Initialize pgBackRest stanza
+  hosts: percona_backup
+  become: true
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
+
+  vars_files:
+    - ../vars/percona_ha_vars.yml
+    - ../vars/percona_ha_pgbackrest_vars.yml
+
+  roles:
+    - percona_pgbackrest_stanza
+
+- name: Configure and verify PostgreSQL WAL archiving
+  hosts: percona_cluster
+  become: true
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
+
+  vars_files:
+    - ../vars/percona_ha_vars.yml
+    - ../vars/percona_ha_pgbackrest_vars.yml
+
+  roles:
+    - percona_pgbackrest_archive
