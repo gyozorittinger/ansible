@@ -1,0 +1,17 @@
+---
+- name: Configure pgBackRest TLS infrastructure
+  hosts: percona_cluster:percona_backup
+  become: true
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
+
+  vars_files:
+    - ../vars/percona_test_vars.yml
+    - ../vars/pgbackrest_test_vars.yml
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  roles:
+    - percona_pgbackrest_tls

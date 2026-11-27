@@ -1,0 +1,18 @@
+---
+percona_pgbackrest_cluster_group: percona_cluster
+percona_pgbackrest_backup_group: percona_backup
+
+percona_pgbackrest_tls_ca_dir: "/root/.percona-credentials/{{ percona_patroni_scope }}/pgbackrest-tls"
+
+percona_pgbackrest_tls_cert_dir: /etc/pgbackrest/cert
+
+percona_pgbackrest_tls_ca_common_name: "{{ percona_patroni_scope }}-pgbackrest-ca"
+
+percona_pgbackrest_tls_key_size: 4096
+percona_pgbackrest_tls_digest: sha256
+
+percona_pgbackrest_tls_ca_validity: "+3650d"
+percona_pgbackrest_tls_cert_validity: "+1095d"
+
+percona_pgbackrest_tls_user: postgres
+percona_pgbackrest_tls_group: postgres

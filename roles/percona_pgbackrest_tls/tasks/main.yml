@@ -1,0 +1,5 @@
+---
+- name: Prepare pgBackRest certificate authority
+  ansible.builtin.import_tasks: ca.yml
+  delegate_to: localhost
+  run_once: true
