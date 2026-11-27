@@ -22,3 +22,9 @@ percona_pgbackrest_archive_allow_switchover: true
 percona_pgbackrest_archive_cluster_group: percona_cluster
 
 percona_pgbackrest_backup_group: percona_backup
+
+percona_pgbackrest_archive_allowed_restart_parameters:
+  - archive_mode
+
+percona_pgbackrest_archive_config_retries: 30
+percona_pgbackrest_archive_config_retry_delay: 5
