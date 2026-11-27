@@ -1,7 +1,7 @@
 # {{ ansible_managed }}
 
 [global]
-repo1-host={{ groups[percona_pgbackrest_backup_group][0] }}
+repo1-host={{ hostvars[groups[percona_pgbackrest_backup_group][0]].percona_node_ip }}
 repo1-host-type=tls
 repo1-host-port={{ percona_pgbackrest_tls_port }}
 repo1-host-ca-file={{ percona_pgbackrest_tls_cert_dir }}/ca.crt

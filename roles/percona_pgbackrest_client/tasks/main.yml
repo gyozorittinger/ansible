@@ -6,14 +6,6 @@
       - groups[percona_pgbackrest_backup_group] | length == 1
     fail_msg: "Exactly one pgBackRest backup server is required."
 
-- name: Verify backup server hostname resolution
-  ansible.builtin.command:
-    argv:
-      - getent
-      - hosts
-      - "{{ groups[percona_pgbackrest_backup_group][0] }}"
-  changed_when: false
-
 - name: Create pgBackRest log directory
   ansible.builtin.file:
     path: "{{ percona_pgbackrest_log_path }}"
@@ -57,7 +49,7 @@
 
 - name: Verify backup server TLS port connectivity
   ansible.builtin.wait_for:
-    host: "{{ groups[percona_pgbackrest_backup_group][0] }}"
+    host: "{{ hostvars[groups[percona_pgbackrest_backup_group][0]].percona_node_ip }}"
     port: "{{ percona_pgbackrest_tls_port }}"
     timeout: 30
 
