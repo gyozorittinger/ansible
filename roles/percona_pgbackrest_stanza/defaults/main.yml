@@ -1,0 +1,11 @@
+---
+percona_pgbackrest_stanza: "{{ percona_patroni_scope }}"
+
+percona_pgbackrest_user: postgres
+percona_pgbackrest_binary: /usr/bin/pgbackrest
+
+percona_pgbackrest_mount_point: /backup
+percona_pgbackrest_require_mount: true
+
+percona_pgbackrest_stanza_retries: 5
+percona_pgbackrest_stanza_retry_delay: 10

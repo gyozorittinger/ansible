@@ -1,0 +1,32 @@
+# {{ ansible_managed }}
+
+[global]
+repo1-host={{ hostvars[groups[percona_pgbackrest_backup_group][0]].percona_node_ip }}
+repo1-host-type=tls
+repo1-host-port={{ percona_pgbackrest_tls_port }}
+repo1-host-ca-file={{ percona_pgbackrest_tls_cert_dir }}/ca.crt
+repo1-host-cert-file={{ percona_pgbackrest_tls_cert_dir }}/server.crt
+repo1-host-key-file={{ percona_pgbackrest_tls_cert_dir }}/server.key
+repo1-path={{ percona_pgbackrest_repo_path }}
+
+process-max={{ percona_pgbackrest_process_max }}
+compress-type={{ percona_pgbackrest_compress_type }}
+compress-level={{ percona_pgbackrest_compress_level }}
+
+log-path={{ percona_pgbackrest_log_path }}
+log-level-console=info
+log-level-file=detail
+
+tls-server-address={{ percona_pgbackrest_tls_address }}
+tls-server-port={{ percona_pgbackrest_tls_port }}
+tls-server-ca-file={{ percona_pgbackrest_tls_cert_dir }}/ca.crt
+tls-server-cert-file={{ percona_pgbackrest_tls_cert_dir }}/server.crt
+tls-server-key-file={{ percona_pgbackrest_tls_cert_dir }}/server.key
+
+{% for host in groups[percona_pgbackrest_backup_group] %}
+tls-server-auth={{ host }}={{ percona_pgbackrest_stanza }}
+{% endfor %}
+
+[{{ percona_pgbackrest_stanza }}]
+pg1-path={{ percona_postgresql_data_dir }}
+pg1-port={{ percona_postgresql_port }}

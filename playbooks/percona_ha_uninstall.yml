@@ -1,0 +1,23 @@
+---
+- name: Completely remove Percona PostgreSQL cluster
+  hosts: percona_cluster
+  become: true
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: true
+
+  vars_files:
+    - ../vars/percona_ha_vars.yml
+
+  pre_tasks:
+    - name: Confirm destructive operation
+      ansible.builtin.assert:
+        that:
+          - percona_confirm_uninstall | default(false) | bool
+        fail_msg: >
+          This operation permanently deletes the PostgreSQL
+          and etcd data. Set percona_confirm_uninstall=true
+          to continue.
+
+  roles:
+    - percona_uninstall

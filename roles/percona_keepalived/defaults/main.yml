@@ -1,0 +1,17 @@
+---
+percona_keepalived_group: percona_cluster
+
+percona_keepalived_config_file: /etc/keepalived/keepalived.conf
+
+percona_keepalived_vip_prefix: 24
+percona_keepalived_vrid: 51
+
+percona_keepalived_base_priority: 150
+percona_keepalived_priority_step: 10
+
+percona_keepalived_advert_int: 1
+percona_keepalived_nopreempt: true
+
+percona_keepalived_check_interval: 2
+percona_keepalived_check_fall: 2
+percona_keepalived_check_rise: 2

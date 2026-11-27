@@ -1,0 +1,15 @@
+[masters]
+master1 ansible_host=titanium-m1.cnt.sas
+master2 ansible_host=titanium-m2.cnt.sas
+master3 ansible_host=titanium-m3.cnt.sas
+
+[workers]
+titanium-n1 ansible_host=titanium-n1.cnt.sas
+titanium-n2 ansible_host=titanium-n2.cnt.sas
+titanium-n3 ansible_host=titanium-n3.cnt.sas
+titanium-n4 ansible_host=titanium-n4.cnt.sas
+titanium-n5 ansible_host=titanium-n5.cnt.sas
+
+[kube_cluster:children]
+masters
+workers

@@ -1,0 +1,84 @@
+---
+# Percona PostgreSQL HA cluster configuration
+#
+# Review this file before installing a new cluster.
+# Most settings can be left at their default values.
+
+# ============================================================
+# PostgreSQL
+# ============================================================
+
+# Tested PostgreSQL version: 16
+# Keep this value consistent with the inventory and backup vars file.
+percona_version: 16
+
+# OPTIONAL: PostgreSQL internal listening port.
+# Applications should normally connect through the HAProxy ports.
+percona_postgresql_port: 5432
+
+# EDIT: Dedicated database filesystem mount point.
+# The filesystem must be created and mounted before installation.
+percona_postgresql_mount_point: /database
+
+# AUTOMATIC: PostgreSQL data directory.
+percona_postgresql_data_dir: "{{ percona_postgresql_mount_point }}/pg{{ percona_version }}data"
+
+# SAFETY: Verify that the database filesystem is mounted.
+# Prevents accidental database initialization on the root filesystem.
+# Strongly recommended to keep enabled.
+percona_postgresql_require_mount: true
+
+
+# ============================================================
+# Operating system baseline
+# ============================================================
+
+# SELinux configuration.
+# The current installation has been tested with SELinux disabled.
+percona_selinux_state: disabled
+
+# SAFETY: Allow the installer to reboot servers if required.
+# Enable only during a new installation when reboots are acceptable.
+percona_baseline_allow_reboot: false
+
+
+# ============================================================
+# HAProxy
+# ============================================================
+
+# OPTIONAL: Application port for read-write connections.
+# Connections are forwarded to the current PostgreSQL primary.
+percona_haproxy_rw_port: 5000
+
+# OPTIONAL: Application port for read-only connections.
+# Connections are distributed across available PostgreSQL replicas.
+percona_haproxy_ro_port: 5001
+
+
+# ============================================================
+# pgBackRest
+# ============================================================
+
+# EDIT: Dedicated backup filesystem mount point.
+# The filesystem must be mounted on the backup server.
+# Keep these settings consistent with percona_ha_pgbackrest_vars.yml.
+percona_pgbackrest_mount_point: /backup
+
+# AUTOMATIC: Backup repository directory.
+percona_pgbackrest_repo_path: "{{ percona_pgbackrest_mount_point }}/pgbackrest"
+
+# SAFETY: Verify that the backup filesystem is mounted.
+percona_pgbackrest_require_mount: true
+
+
+# ============================================================
+# Credentials
+# ============================================================
+
+# AUTOMATIC: Location of generated credentials on the Ansible controller.
+#
+# IMPORTANT:
+# Preserve this directory securely after installation.
+# It contains database passwords and the pgBackRest TLS CA material.
+# Never commit its contents to a Git repository.
+percona_credentials_dir: "/root/.percona-credentials/{{ percona_patroni_scope }}"

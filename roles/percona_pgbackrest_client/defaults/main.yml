@@ -1,0 +1,25 @@
+---
+percona_pgbackrest_backup_group: percona_backup
+
+percona_pgbackrest_config_file: /etc/pgbackrest/pgbackrest.conf
+
+percona_pgbackrest_repo_path: /backup/pgbackrest
+percona_pgbackrest_log_path: /var/log/pgbackrest
+
+percona_pgbackrest_tls_cert_dir: /etc/pgbackrest/cert
+percona_pgbackrest_tls_port: 8432
+percona_pgbackrest_tls_address: "{{ percona_node_ip }}"
+
+percona_pgbackrest_stanza: "{{ percona_patroni_scope }}"
+
+percona_pgbackrest_user: postgres
+percona_pgbackrest_group: postgres
+
+percona_pgbackrest_process_max: 4
+percona_pgbackrest_compress_type: zst
+percona_pgbackrest_compress_level: 3
+
+percona_version: 16
+percona_postgresql_mount_point: /database
+percona_postgresql_data_dir: "{{ percona_postgresql_mount_point }}/pg{{ percona_version }}data"
+percona_postgresql_port: 5432

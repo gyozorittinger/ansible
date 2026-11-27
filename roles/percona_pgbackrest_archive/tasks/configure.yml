@@ -1,0 +1,64 @@
+---
+- name: Read current Patroni dynamic configuration
+  ansible.builtin.uri:
+    url: "http://{{ percona_node_ip }}:{{ percona_patroni_restapi_port }}/config"
+    method: GET
+    return_content: true
+    status_code: 200
+  register: patroni_archive_current_config
+
+- name: Define desired PostgreSQL archive parameters
+  ansible.builtin.set_fact:
+    patroni_archive_desired_parameters:
+      archive_mode: "{{ percona_pgbackrest_archive_mode }}"
+      archive_command: "{{ percona_pgbackrest_archive_command }}"
+      archive_timeout: "{{ percona_pgbackrest_archive_timeout }}"
+      restore_command: "{{ percona_pgbackrest_restore_command }}"
+
+- name: Determine whether archive configuration requires modification
+  ansible.builtin.set_fact:
+    patroni_archive_config_changed: >-
+      {{
+        patroni_archive_current_config.json.postgresql.parameters.archive_mode
+          | default('off') != percona_pgbackrest_archive_mode
+        or
+        patroni_archive_current_config.json.postgresql.parameters.archive_command
+          | default('') != percona_pgbackrest_archive_command
+        or
+        patroni_archive_current_config.json.postgresql.parameters.archive_timeout
+          | default('0') | string != percona_pgbackrest_archive_timeout
+        or
+        patroni_archive_current_config.json.postgresql.parameters.restore_command
+          | default('') != percona_pgbackrest_restore_command
+      }}
+
+- name: Update Patroni dynamic archive configuration
+  ansible.builtin.uri:
+    url: "http://{{ percona_node_ip }}:{{ percona_patroni_restapi_port }}/config"
+    method: PATCH
+    body_format: json
+    body:
+      postgresql:
+        parameters: "{{ patroni_archive_desired_parameters }}"
+    status_code: 200
+    return_content: true
+  when: patroni_archive_config_changed | bool
+  changed_when: true
+
+- name: Read updated Patroni dynamic configuration
+  ansible.builtin.uri:
+    url: "http://{{ percona_node_ip }}:{{ percona_patroni_restapi_port }}/config"
+    method: GET
+    return_content: true
+    status_code: 200
+  register: patroni_archive_updated_config
+
+- name: Validate PostgreSQL archive configuration
+  ansible.builtin.assert:
+    that:
+      - patroni_archive_updated_config.json.postgresql.parameters.archive_mode == percona_pgbackrest_archive_mode
+      - patroni_archive_updated_config.json.postgresql.parameters.archive_command == percona_pgbackrest_archive_command
+      - patroni_archive_updated_config.json.postgresql.parameters.archive_timeout | string == percona_pgbackrest_archive_timeout
+      - patroni_archive_updated_config.json.postgresql.parameters.restore_command == percona_pgbackrest_restore_command
+    success_msg: "Patroni archive configuration is correct."
+    fail_msg: "Patroni archive configuration validation failed."

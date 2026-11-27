@@ -1,0 +1,93 @@
+---
+- name: Wait for PostgreSQL archive configuration propagation
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - postgres
+      - --
+      - "/usr/pgsql-{{ percona_version }}/bin/psql"
+      - -X
+      - -p
+      - "{{ percona_postgresql_port | string }}"
+      - -At
+      - -c
+      - >-
+        SELECT json_build_object(
+          'archive_mode', current_setting('archive_mode'),
+          'archive_command', current_setting('archive_command'),
+          'restore_command', current_setting('restore_command'),
+          'archive_timeout_seconds',
+          (SELECT setting::integer FROM pg_settings
+           WHERE name = 'archive_timeout'),
+          'archive_mode_pending',
+          (SELECT pending_restart FROM pg_settings
+           WHERE name = 'archive_mode')
+        );
+  register: patroni_archive_propagation
+  changed_when: false
+  vars:
+    archive_settings: >-
+      {{ patroni_archive_propagation.stdout | from_json }}
+  until:
+    - patroni_archive_propagation.rc == 0
+    - >-
+      archive_settings.archive_timeout_seconds | int ==
+      percona_pgbackrest_archive_timeout | regex_replace('s$', '') | int
+    - >-
+      archive_settings.restore_command ==
+      percona_pgbackrest_restore_command
+    - >-
+      (
+        archive_settings.archive_mode == percona_pgbackrest_archive_mode
+        and
+        archive_settings.archive_command == percona_pgbackrest_archive_command
+      )
+      or
+      (
+        archive_settings.archive_mode != percona_pgbackrest_archive_mode
+        and
+        archive_settings.archive_mode_pending | bool
+      )
+  retries: "{{ percona_pgbackrest_archive_config_retries }}"
+  delay: "{{ percona_pgbackrest_archive_config_retry_delay }}"
+
+- name: Read local Patroni restart requirements
+  ansible.builtin.uri:
+    url: "http://{{ percona_node_ip }}:{{ percona_patroni_restapi_port }}/patroni"
+    method: GET
+    status_code: 200
+  register: patroni_archive_local_status
+  until: >-
+    not (archive_settings.archive_mode_pending | bool)
+    or (patroni_archive_local_status.json.pending_restart
+        | default(false) | bool)
+  vars:
+    archive_settings: "{{ patroni_archive_propagation.stdout | from_json }}"
+  retries: "{{ percona_pgbackrest_archive_config_retries }}"
+  delay: "{{ percona_pgbackrest_archive_config_retry_delay }}"
+
+- name: Validate pending restart reasons
+  ansible.builtin.assert:
+    that:
+      - restart_parameters | length > 0
+      - unexpected_restart_parameters | length == 0
+    fail_msg: >-
+      Unexpected or unknown PostgreSQL restart requirements
+      on {{ inventory_hostname }}:
+      {{ restart_parameters }}.
+      Automatic restart aborted.
+    success_msg: "Only approved restart parameters are pending."
+  vars:
+    restart_parameters: >-
+      {{
+        patroni_archive_local_status.json.pending_restart_reason
+        | default({})
+        | list
+      }}
+    unexpected_restart_parameters: >-
+      {{
+        restart_parameters
+        | difference(percona_pgbackrest_archive_allowed_restart_parameters)
+      }}
+  when: patroni_archive_local_status.json.pending_restart | default(false) | bool

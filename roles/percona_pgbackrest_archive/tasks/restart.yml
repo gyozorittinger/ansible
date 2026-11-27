@@ -1,0 +1,109 @@
+---
+- name: Define Patroni API endpoint
+  ansible.builtin.set_fact:
+    patroni_archive_api_url: >-
+      http://{{ percona_node_ip }}:{{ percona_patroni_restapi_port }}
+
+- name: Read current Patroni cluster state
+  ansible.builtin.uri:
+    url: "{{ patroni_archive_api_url }}/cluster"
+    method: GET
+    status_code: 200
+  register: patroni_archive_cluster
+  vars:
+    expected_pending_members: >-
+      {{
+        groups[percona_pgbackrest_archive_cluster_group]
+        | map('extract', hostvars, 'patroni_archive_local_status')
+        | map(attribute='json')
+        | selectattr('pending_restart', 'defined')
+        | selectattr('pending_restart', 'equalto', true)
+        | map(attribute='patroni.name')
+        | list
+      }}
+    actual_pending_members: >-
+      {{
+        patroni_archive_cluster.json.members
+        | selectattr('pending_restart', 'defined')
+        | selectattr('pending_restart', 'equalto', true)
+        | map(attribute='name')
+        | list
+      }}
+  until:
+    - patroni_archive_cluster.status == 200
+    - expected_pending_members | difference(actual_pending_members) | length == 0
+  retries: "{{ percona_pgbackrest_archive_config_retries }}"
+  delay: "{{ percona_pgbackrest_archive_config_retry_delay }}"
+
+- name: Identify current leader and replicas
+  ansible.builtin.set_fact:
+    patroni_archive_leaders: >-
+      {{
+        patroni_archive_cluster.json.members
+        | selectattr('role', 'equalto', 'leader')
+        | list
+      }}
+    patroni_archive_replicas: >-
+      {{
+        patroni_archive_cluster.json.members
+        | selectattr('role', 'equalto', 'replica')
+        | list
+      }}
+    patroni_archive_pending_members: >-
+      {{
+        patroni_archive_cluster.json.members
+        | selectattr('pending_restart', 'defined')
+        | selectattr('pending_restart', 'equalto', true)
+        | list
+      }}
+
+- name: Validate Patroni cluster topology
+  ansible.builtin.assert:
+    that:
+      - patroni_archive_cluster.json.scope == percona_patroni_scope
+      - patroni_archive_leaders | length == 1
+      - patroni_archive_replicas | length == 2
+      - patroni_archive_leaders[0].state == 'running'
+      - >-
+        (patroni_archive_cluster.json.members
+        | map(attribute='name') | list | sort)
+        ==
+        (groups[percona_pgbackrest_archive_cluster_group] | sort)
+    fail_msg: "Unexpected Patroni cluster topology."
+
+- name: Validate replica health before rolling restart
+  ansible.builtin.assert:
+    that:
+      - item.state == 'streaming'
+      - item.lag | default(-1) | int >= 0
+      - item.lag | int <= percona_pgbackrest_archive_max_replica_lag | int
+    fail_msg: "Replica {{ item.name }} is not healthy."
+  loop: "{{ patroni_archive_replicas }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: patroni_archive_pending_members | length > 0
+
+- name: Display current cluster restart requirements
+  ansible.builtin.debug:
+    msg:
+      - "Leader: {{ patroni_archive_leaders[0].name }}"
+      - "Replicas: {{ patroni_archive_replicas | map(attribute='name') | list }}"
+      - "Pending restart: {{ patroni_archive_pending_members | map(attribute='name') | list }}"
+
+- name: Restart pending replicas sequentially
+  ansible.builtin.include_tasks: restart_member.yml
+  loop: >-
+    {{
+      patroni_archive_replicas
+      | selectattr('pending_restart', 'defined')
+      | selectattr('pending_restart', 'equalto', true)
+      | map(attribute='name')
+      | list
+    }}
+  loop_control:
+    loop_var: patroni_restart_member
+
+- name: Display message when no restart is required
+  ansible.builtin.debug:
+    msg: "No PostgreSQL restart is required."
+  when: patroni_archive_pending_members | length == 0

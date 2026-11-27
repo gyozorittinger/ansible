@@ -1,0 +1,48 @@
+# {{ ansible_managed }}
+
+global_defs {
+    router_id {{ inventory_hostname }}
+    script_user root
+    enable_script_security
+}
+
+vrrp_script check_haproxy {
+    script "/usr/bin/systemctl is-active --quiet haproxy.service"
+    interval {{ percona_keepalived_check_interval }}
+    timeout 2
+    fall {{ percona_keepalived_check_fall }}
+    rise {{ percona_keepalived_check_rise }}
+    weight 0
+}
+
+vrrp_instance VI_POSTGRESQL {
+    state BACKUP
+    interface {{ percona_keepalived_interface }}
+    virtual_router_id {{ percona_keepalived_vrid }}
+
+    priority {{ percona_keepalived_base_priority - (groups[percona_keepalived_group].index(inventory_hostname) * percona_keepalived_priority_step) }}
+
+    advert_int {{ percona_keepalived_advert_int }}
+
+{% if percona_keepalived_nopreempt %}
+    nopreempt
+{% endif %}
+
+    unicast_src_ip {{ percona_node_ip }}
+
+    unicast_peer {
+{% for host in groups[percona_keepalived_group] %}
+{% if host != inventory_hostname %}
+        {{ hostvars[host].percona_node_ip }}
+{% endif %}
+{% endfor %}
+    }
+
+    virtual_ipaddress {
+        {{ percona_keepalived_vip }}/{{ percona_keepalived_vip_prefix }} dev {{ percona_keepalived_interface }}
+    }
+
+    track_script {
+        check_haproxy
+    }
+}

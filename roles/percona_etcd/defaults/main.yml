@@ -1,0 +1,17 @@
+---
+percona_etcd_group: percona_cluster
+
+percona_etcd_cluster_token: percona-etcd-cluster
+
+percona_etcd_data_dir: /var/lib/etcd
+percona_etcd_config_file: /etc/etcd/etcd.conf.yaml
+
+percona_etcd_client_port: 2379
+percona_etcd_peer_port: 2380
+
+percona_etcd_heartbeat_interval: 100
+percona_etcd_election_timeout: 1000
+
+percona_etcd_auto_compaction_mode: periodic
+percona_etcd_auto_compaction_retention: "1h"
+percona_etcd_quota_backend_bytes: 8589934592

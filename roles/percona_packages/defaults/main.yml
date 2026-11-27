@@ -1,0 +1,17 @@
+---
+percona_version: 16
+
+percona_cluster_packages:
+  - "percona-postgresql{{ percona_version }}-server"
+  - "percona-postgresql{{ percona_version }}-contrib"
+  - percona-patroni
+  - percona-patroni-etcd
+  - percona-pgbackrest
+  - percona-haproxy
+  - etcd
+  - keepalived
+
+percona_backup_packages:
+  - percona-pgbackrest
+
+percona_packages_profile: cluster

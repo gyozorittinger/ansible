@@ -1,0 +1,100 @@
+---
+- name: Read cluster state before member restart
+  ansible.builtin.uri:
+    url: "{{ patroni_archive_api_url }}/cluster"
+    method: GET
+    status_code: 200
+  register: patroni_archive_before_restart
+
+- name: Identify member to restart
+  ansible.builtin.set_fact:
+    patroni_archive_target: >-
+      {{
+        patroni_archive_before_restart.json.members
+        | selectattr('name', 'equalto', patroni_restart_member)
+        | first
+      }}
+
+- name: Ensure target member is a healthy replica
+  ansible.builtin.assert:
+    that:
+      - patroni_archive_target.role == 'replica'
+      - patroni_archive_target.state == 'streaming'
+      - patroni_archive_target.lag | default(-1) | int >= 0
+      - patroni_archive_target.lag | int <= percona_pgbackrest_archive_max_replica_lag | int
+    fail_msg: >-
+      Member {{ patroni_restart_member }} is not a healthy replica.
+      Rolling restart aborted.
+
+- name: Read current restart requirements from target member
+  ansible.builtin.uri:
+    url: "{{ patroni_archive_target.api_url }}"
+    method: GET
+    status_code: 200
+  register: patroni_archive_target_status
+
+- name: Validate restart reasons immediately before restart
+  ansible.builtin.assert:
+    that:
+      - patroni_archive_target_status.json.role == 'replica'
+      - patroni_archive_target_status.json.state == 'running'
+      - restart_parameters | length > 0
+      - unexpected_restart_parameters | length == 0
+    fail_msg: >-
+      Unsafe restart conditions detected on
+      {{ patroni_restart_member }}.
+      Automatic restart aborted.
+  vars:
+    restart_parameters: >-
+      {{
+        patroni_archive_target_status.json.pending_restart_reason
+        | default({}) | list
+      }}
+    unexpected_restart_parameters: >-
+      {{
+        restart_parameters
+        | difference(percona_pgbackrest_archive_allowed_restart_parameters)
+      }}
+  when: patroni_archive_target_status.json.pending_restart | default(false) | bool
+
+- name: Restart replica with pending configuration changes
+  ansible.builtin.command:
+    argv:
+      - patronictl
+      - -c
+      - "{{ percona_patroni_config_file }}"
+      - restart
+      - "{{ percona_patroni_scope }}"
+      - "{{ patroni_restart_member }}"
+      - --pending
+      - --force
+  when: patroni_archive_target_status.json.pending_restart | default(false) | bool
+  register: patroni_archive_member_restart
+  changed_when: true
+
+- name: Wait for replica to become healthy
+  ansible.builtin.uri:
+    url: "{{ patroni_archive_api_url }}/cluster"
+    method: GET
+    status_code: 200
+  register: patroni_archive_replica_health
+  vars:
+    current_member: >-
+      {{
+        patroni_archive_replica_health.json.members
+        | selectattr('name', 'equalto', patroni_restart_member)
+        | first
+        | default({})
+      }}
+  until:
+    - current_member.role | default('') == 'replica'
+    - current_member.state | default('') == 'streaming'
+    - current_member.lag | default(-1) | int >= 0
+    - current_member.lag | default(-1) | int <= percona_pgbackrest_archive_max_replica_lag | int
+    - not (current_member.pending_restart | default(false) | bool)
+  retries: "{{ percona_pgbackrest_archive_restart_retries }}"
+  delay: "{{ percona_pgbackrest_archive_restart_delay }}"
+
+- name: Display replica restart result
+  ansible.builtin.debug:
+    msg: "Replica {{ patroni_restart_member }} is healthy."

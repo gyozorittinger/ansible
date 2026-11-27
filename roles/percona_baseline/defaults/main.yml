@@ -1,0 +1,3 @@
+---
+percona_selinux_state: disabled
+percona_baseline_allow_reboot: false

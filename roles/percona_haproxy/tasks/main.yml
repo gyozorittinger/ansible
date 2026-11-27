@@ -1,0 +1,47 @@
+---
+- name: Validate HAProxy configuration variables
+  ansible.builtin.assert:
+    that:
+      - groups[percona_haproxy_group] | length == 3
+      - percona_postgresql_port is defined
+      - percona_patroni_restapi_port is defined
+      - percona_haproxy_rw_port != percona_haproxy_ro_port
+
+- name: Deploy HAProxy configuration
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: "{{ percona_haproxy_config_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+    validate: "/usr/sbin/haproxy -c -f %s"
+  notify: Reload HAProxy
+
+- name: Enable and start HAProxy service
+  ansible.builtin.systemd_service:
+    name: haproxy
+    enabled: true
+    state: started
+
+- name: Apply HAProxy configuration changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for PostgreSQL read-write listener
+  ansible.builtin.wait_for:
+    host: "{{ percona_node_ip }}"
+    port: "{{ percona_haproxy_rw_port }}"
+    timeout: 30
+
+- name: Wait for PostgreSQL read-only listener
+  ansible.builtin.wait_for:
+    host: "{{ percona_node_ip }}"
+    port: "{{ percona_haproxy_ro_port }}"
+    timeout: 30
+
+- name: Display HAProxy configuration summary
+  ansible.builtin.debug:
+    msg:
+      - "HAProxy node: {{ inventory_hostname }}"
+      - "Read-write: {{ percona_node_ip }}:{{ percona_haproxy_rw_port }}"
+      - "Read-only: {{ percona_node_ip }}:{{ percona_haproxy_ro_port }}"

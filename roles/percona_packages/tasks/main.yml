@@ -1,0 +1,19 @@
+---
+- name: Validate package profile
+  ansible.builtin.assert:
+    that:
+      - percona_packages_profile in ['cluster', 'backup']
+
+- name: Install Percona cluster packages
+  ansible.builtin.dnf:
+    name: "{{ percona_cluster_packages }}"
+    state: present
+    install_weak_deps: false
+  when: percona_packages_profile == 'cluster'
+
+- name: Install pgBackRest server packages
+  ansible.builtin.dnf:
+    name: "{{ percona_backup_packages }}"
+    state: present
+    install_weak_deps: false
+  when: percona_packages_profile == 'backup'

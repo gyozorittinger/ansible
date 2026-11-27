@@ -1,0 +1,126 @@
+---
+- name: Verify dedicated database filesystem is mounted
+  ansible.builtin.command:
+    argv:
+      - mountpoint
+      - -q
+      - "{{ percona_postgresql_mount_point }}"
+  register: database_mount_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: percona_postgresql_require_mount | bool
+
+- name: Ensure database filesystem is available
+  ansible.builtin.assert:
+    that:
+      - database_mount_check.rc == 0
+    fail_msg: "ERROR: {{ percona_postgresql_mount_point }} is not mounted. Aborting installation."
+    success_msg: "Dedicated database filesystem is mounted."
+  when: percona_postgresql_require_mount | bool
+
+- name: Prepare PostgreSQL credentials
+  ansible.builtin.import_tasks: credentials.yml
+
+- name: Validate Patroni configuration
+  ansible.builtin.assert:
+    that:
+      - percona_node_ip is defined
+      - percona_postgresql_superuser_password is defined
+      - percona_postgresql_replication_password is defined
+      - percona_postgresql_rewind_password is defined
+    fail_msg: "Missing required Patroni configuration"
+  no_log: true
+
+- name: Disable standalone PostgreSQL service
+  ansible.builtin.systemd_service:
+    name: "postgresql-{{ percona_version }}"
+    enabled: false
+    state: stopped
+
+- name: Ensure Patroni configuration directory exists
+  ansible.builtin.file:
+    path: /etc/patroni
+    state: directory
+    owner: root
+    group: postgres
+    mode: "0750"
+
+- name: Ensure PostgreSQL data directory exists
+  ansible.builtin.file:
+    path: "{{ percona_postgresql_data_dir }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0700"
+
+- name: Deploy Patroni configuration
+  ansible.builtin.template:
+    src: patroni.yml.j2
+    dest: "{{ percona_patroni_config_file }}"
+    owner: root
+    group: postgres
+    mode: "0640"
+    validate: "/usr/bin/patroni --validate-config %s"
+  no_log: true
+  diff: false
+
+- name: Enable and start Patroni service
+  ansible.builtin.systemd_service:
+    name: patroni
+    enabled: true
+    state: started
+    no_block: true
+
+- name: Wait for Patroni REST API
+  ansible.builtin.uri:
+    url: "http://{{ percona_node_ip }}:{{ percona_patroni_restapi_port }}/health"
+    status_code: 200
+    return_content: true
+  register: patroni_health
+  until: patroni_health.status | default(0) == 200
+  retries: 60
+  delay: 5
+
+- name: Display Patroni cluster status
+  ansible.builtin.command:
+    argv:
+      - patronictl
+      - -c
+      - "{{ percona_patroni_config_file }}"
+      - list
+  register: patroni_cluster_status
+  changed_when: false
+  run_once: true
+
+- name: Show Patroni cluster members
+  ansible.builtin.debug:
+    var: patroni_cluster_status.stdout_lines
+  run_once: true
+ 
+- name: Query actual PostgreSQL data directory
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - postgres
+      - --
+      - "{{ percona_postgresql_bin_dir }}/psql"
+      - -p
+      - "{{ percona_postgresql_port | string }}"
+      - -Atc
+      - "SHOW data_directory;"
+  register: percona_actual_data_directory
+  changed_when: false
+
+- name: Verify PostgreSQL data directory
+  ansible.builtin.assert:
+    that:
+      - percona_actual_data_directory.stdout | trim == percona_postgresql_data_dir
+    fail_msg: >-
+      Incorrect PostgreSQL data directory!
+      Expected: {{ percona_postgresql_data_dir }}
+      Actual: {{ percona_actual_data_directory.stdout | trim }}
+    success_msg: >-
+      PostgreSQL data directory verified:
+      {{ percona_actual_data_directory.stdout | trim }}

@@ -1,0 +1,413 @@
+# Percona PostgreSQL HA — Administration Guide
+
+This guide covers everyday operations on an installed cluster. Ansible is not required. For installation, reconfiguration of the deployment and removal, see [Installation Guide](installPerconaHA.md).
+
+Run shell commands as root unless otherwise indicated. Replace `example-pgsql`, example member names and `192.0.2.10` with actual values. Commands assume default ports and paths.
+
+## 1. Understand the cluster
+
+Three database nodes each run PostgreSQL, Patroni, etcd, HAProxy, Keepalived and pgBackRest. A dedicated backup server hosts the repository. Patroni dynamically assigns primary and replica roles. Keepalived independently assigns the VIP; the VIP holder need not be the primary.
+
+Applications connect to the VIP on port 5000 for read-write access or 5001 for read-only access. The read-only endpoint does not fall back to the primary when no replicas are available.
+
+## 2. Check cluster health
+
+On any database node:
+
+```bash
+patronictl -c /etc/patroni/patroni.yml list
+etcdctl endpoint health --cluster
+etcdctl member list -w table
+```
+
+Expect one running leader, two streaming replicas, low replica lag and three healthy etcd endpoints.
+
+On each database node:
+
+```bash
+systemctl is-active etcd patroni haproxy keepalived pgbackrest
+ip -br address
+curl -fsS 'http://127.0.0.1:7000/stats;csv'
+```
+
+All services should be active. The VIP must appear on exactly one node. HAProxy should show one available primary in the read-write backend and available replicas in the read-only backend. PostgreSQL is managed by Patroni, not the standalone PostgreSQL service.
+
+On the backup server:
+
+```bash
+systemctl is-active pgbackrest
+sudo -u postgres pgbackrest --stanza=example-pgsql check
+sudo -u postgres pgbackrest --stanza=example-pgsql info
+```
+
+## 3. Retrieve credentials and configure application access
+
+On the original Ansible controller, generated credentials are stored in:
+
+```bash
+cat /root/.percona-credentials/example-pgsql/credentials.yml
+```
+
+The generated accounts are postgres, replicator and rewind_user. Store credentials in an approved password manager. Preserve the entire credential directory securely, including the TLS CA private key.
+
+### Create an application database and user
+
+On the current primary:
+
+```bash
+sudo -u postgres psql
+```
+
+```sql
+CREATE ROLE application_user LOGIN;
+\password application_user
+CREATE DATABASE application_db OWNER application_user;
+\q
+```
+
+### Allow application connections
+
+On all database nodes, edit `/etc/patroni/patroni.yml`. Preserve existing rules and add appropriate entries to `postgresql.pg_hba`.
+
+```yaml
+- host application_db application_user 192.0.2.0/24 scram-sha-256
+```
+
+This CIDR is an example only. PostgreSQL normally sees the HAProxy node's source IP rather than the original application IP. Restrict PostgreSQL rules to the actual HAProxy source addresses where possible and enforce application network restrictions at the firewall or HAProxy layer. Application TLS is not configured by default.
+
+After applying equivalent settings to all database nodes, run on any database node:
+
+```bash
+patronictl -c /etc/patroni/patroni.yml reload example-pgsql --force
+```
+
+### Test application connections
+
+From an authorized client with psql installed:
+
+```bash
+psql -h 192.0.2.10 -p 5000 -U application_user -d application_db -c 'SELECT pg_is_in_recovery();'
+psql -h 192.0.2.10 -p 5001 -U application_user -d application_db -c 'SELECT pg_is_in_recovery();'
+```
+
+Expected results: `f` for read-write and `t` for read-only. Do not use the postgres superuser for normal application connections.
+
+## 4. PostgreSQL extensions
+
+The contrib package is installed on all database nodes. On the primary, connect to the required database:
+
+```bash
+sudo -u postgres psql -d application_db
+```
+
+```sql
+SELECT name, default_version, installed_version
+FROM pg_available_extensions ORDER BY name;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+```
+
+Extensions are enabled separately per database. Some require additional packages, configuration or restart.
+
+## 5. Modify PostgreSQL configuration
+
+On any database node:
+
+```bash
+patronictl -c /etc/patroni/patroni.yml show-config example-pgsql
+patronictl -c /etc/patroni/patroni.yml edit-config example-pgsql
+```
+
+Example dynamic configuration (merge into existing settings, do not replace unrelated parameters):
+
+```yaml
+postgresql:
+  parameters:
+    max_connections: 300
+    shared_buffers: 4GB
+    effective_cache_size: 12GB
+    maintenance_work_mem: 256MB
+    work_mem: 8MB
+```
+
+These are illustrative values, not sizing recommendations. Adjust to memory, workload and concurrency.
+
+To modify a single parameter:
+
+```bash
+patronictl -c /etc/patroni/patroni.yml edit-config example-pgsql --pg 'max_connections=300' --force
+patronictl -c /etc/patroni/patroni.yml list
+```
+
+Check pending restart indicators. Do not edit PostgreSQL configuration files generated by Patroni directly. Record manual changes separately from the original installer configuration.
+
+## 6. Switchover, restart and replica reinitialization
+
+Run on any database node.
+
+### Controlled switchover
+
+```bash
+patronictl -c /etc/patroni/patroni.yml list
+patronictl -c /etc/patroni/patroni.yml switchover example-pgsql
+```
+
+Follow the interactive prompts. Alternatively, after verifying the actual leader and healthy candidate:
+
+```bash
+patronictl -c /etc/patroni/patroni.yml switchover example-pgsql --leader example-pgsql-node-01 --candidate example-pgsql-node-02 --force
+```
+
+Existing connections may be interrupted; applications must reconnect. Verify cluster status afterward.
+
+### Restart a member
+
+```bash
+patronictl -c /etc/patroni/patroni.yml restart example-pgsql example-pgsql-node-03
+```
+
+To restart only if pending:
+
+```bash
+patronictl -c /etc/patroni/patroni.yml restart example-pgsql example-pgsql-node-03 --pending --force
+```
+
+Restart replicas one at a time and wait for streaming and catch-up. If the primary needs a restart, switch over first whenever possible. Never restart all members simultaneously.
+
+### Reload configuration
+
+```bash
+patronictl -c /etc/patroni/patroni.yml reload example-pgsql --force
+```
+
+Reload does not replace restart for parameters requiring one.
+
+### Reinitialize a failed replica
+
+**WARNING: This destroys the selected replica's local data. Never select the current primary.**
+
+```bash
+patronictl -c /etc/patroni/patroni.yml list
+patronictl -c /etc/patroni/patroni.yml reinit example-pgsql example-pgsql-node-03 --wait
+```
+
+Verify cluster health afterward. This standard Patroni procedure has not been tested as part of this deployment.
+
+## 7. Verify WAL archiving
+
+On any database node:
+
+```bash
+sudo -u postgres psql -c 'SHOW archive_mode;'
+sudo -u postgres psql -c 'SHOW archive_command;'
+sudo -u postgres psql -c 'SHOW archive_timeout;'
+sudo -u postgres psql -c 'SHOW restore_command;'
+```
+
+Expected default settings:
+
+```text
+archive_mode = on
+archive_command = /usr/bin/pgbackrest --stanza=example-pgsql archive-push %p
+archive_timeout = 1min
+restore_command = /usr/bin/pgbackrest --stanza=example-pgsql archive-get %f %p
+```
+
+The archive command transfers WAL to the repository; the restore command retrieves WAL during recovery. The automated restore_command enhancement has not been execution-tested.
+
+If restore_command is missing, the following is the intended manual configuration procedure (review the actual stanza first):
+
+```bash
+patronictl -c /etc/patroni/patroni.yml edit-config example-pgsql --pg 'restore_command=/usr/bin/pgbackrest --stanza=example-pgsql archive-get %f %p' --force
+```
+
+Verify the effective setting on all members. This parameter does not itself require a restart.
+
+On the primary, inspect archive statistics:
+
+```bash
+sudo -u postgres psql -x -c 'SELECT * FROM pg_stat_archiver;'
+```
+
+Investigate continuous archive failures immediately: unarchived WAL can fill the database filesystem.
+
+## 8. Create and manage backups
+
+Run all commands in this section on the backup server.
+
+### First full backup
+
+```bash
+sudo -u postgres pgbackrest --stanza=example-pgsql check
+sudo -u postgres pgbackrest --stanza=example-pgsql --type=full --log-level-console=info backup
+sudo -u postgres pgbackrest --stanza=example-pgsql info
+```
+
+Create a successful full backup before relying on scheduled backups.
+
+### Differential backup
+
+```bash
+sudo -u postgres pgbackrest --stanza=example-pgsql --type=diff backup
+```
+
+Contains changes since the most recent full backup.
+
+### Incremental backup
+
+```bash
+sudo -u postgres pgbackrest --stanza=example-pgsql --type=incr backup
+```
+
+Contains changes since the preceding backup.
+
+### Retention
+
+Retention is normally applied after successful backups. To apply it manually after reviewing the policy:
+
+```bash
+sudo -u postgres pgbackrest --stanza=example-pgsql expire
+```
+
+Do not delete individual backup or WAL files manually. Default retention is two full and seven differential backups, not days.
+
+## 9. Schedule automatic backups
+
+Scheduling is manual. On the backup server:
+
+```bash
+dnf install -y cronie
+systemctl enable --now crond
+crontab -u postgres -e
+```
+
+Example: full backup Sunday at 01:00, differential Monday through Saturday at 01:00. Replace the stanza name.
+
+```cron
+0 1 * * 0 /usr/bin/pgbackrest --stanza=example-pgsql --type=full backup
+0 1 * * 1-6 /usr/bin/pgbackrest --stanza=example-pgsql --type=diff backup
+```
+
+Verify:
+
+```bash
+crontab -u postgres -l
+```
+
+Adjust retention and schedule to customer requirements. Configure external monitoring and failure notifications. Logs are in `/var/log/pgbackrest/`. A successful backup does not replace restore testing.
+
+## 10. Configuration and service locations
+
+| Component | Location |
+|---|---|
+| Patroni | /etc/patroni/patroni.yml |
+| etcd | /etc/etcd/etcd.conf.yaml |
+| HAProxy | /etc/haproxy/haproxy.cfg |
+| Keepalived | /etc/keepalived/keepalived.conf |
+| pgBackRest | /etc/pgbackrest/pgbackrest.conf |
+| pgBackRest TLS | /etc/pgbackrest/cert/ |
+| PostgreSQL data | /database/pg16data |
+| PostgreSQL logs | /database/pg16data/log/ |
+| etcd data | /var/lib/etcd |
+| Backup repository | /backup/pgbackrest |
+| pgBackRest logs | /var/log/pgbackrest/ |
+
+## 11. Troubleshooting
+
+### PostgreSQL cluster unhealthy
+
+On a database node:
+
+```bash
+patronictl -c /etc/patroni/patroni.yml list
+journalctl -u patroni -n 100 --no-pager
+ls -lh /database/pg16data/log/
+df -h /database
+```
+
+### etcd unhealthy
+
+On a database node:
+
+```bash
+etcdctl endpoint health --cluster
+etcdctl member list -w table
+journalctl -u etcd -n 100 --no-pager
+```
+
+Check network connectivity. Do not delete etcd data on an active cluster.
+
+### VIP or application connection unavailable
+
+On the database nodes:
+
+```bash
+ip -br address
+ss -lntp
+systemctl status keepalived haproxy
+journalctl -u keepalived -n 100 --no-pager
+journalctl -u haproxy -n 100 --no-pager
+curl -fsS 'http://127.0.0.1:7000/stats;csv'
+```
+
+Check interface, VIP, VRRP communication, HAProxy status, client port, pg_hba rules and network access restrictions.
+
+### Backup failure
+
+On the backup server:
+
+```bash
+sudo -u postgres pgbackrest --stanza=example-pgsql check
+sudo -u postgres pgbackrest --stanza=example-pgsql info
+journalctl -u pgbackrest -n 100 --no-pager
+ls -lh /var/log/pgbackrest/
+findmnt /backup
+df -h /backup
+```
+
+### TLS certificate problems
+
+On the affected server:
+
+```bash
+openssl verify -CAfile /etc/pgbackrest/cert/ca.crt /etc/pgbackrest/cert/server.crt
+openssl x509 -in /etc/pgbackrest/cert/server.crt -noout -subject -issuer -dates
+```
+
+Automatic certificate renewal is not configured. Monitor certificate expiration and plan renewal before expiry.
+
+## 12. Recovery limitations
+
+Full backup, WAL archiving, controlled switchover, rolling restart and failover following a controlled service stop were tested. Full database restore, PITR, actual WAL retrieval through the final automated restore_command configuration, abrupt server failure and disaster recovery have not been validated. Some standard administration commands in this guide are examples rather than execution-tested procedures.
+
+Do not consider the backup infrastructure disaster-recovery validated until successful restore and recovery tests have been completed.
+
+## 13. Quick command reference
+
+On a database node:
+
+```bash
+patronictl -c /etc/patroni/patroni.yml list
+patronictl -c /etc/patroni/patroni.yml show-config example-pgsql
+patronictl -c /etc/patroni/patroni.yml edit-config example-pgsql
+patronictl -c /etc/patroni/patroni.yml switchover example-pgsql
+etcdctl endpoint health --cluster
+```
+
+On the backup server:
+
+```bash
+sudo -u postgres pgbackrest --stanza=example-pgsql check
+sudo -u postgres pgbackrest --stanza=example-pgsql info
+sudo -u postgres pgbackrest --stanza=example-pgsql --type=full backup
+sudo -u postgres pgbackrest --stanza=example-pgsql --type=diff backup
+sudo -u postgres pgbackrest --stanza=example-pgsql --type=incr backup
+```
+
+## References
+
+- [Installation Guide](installPerconaHA.md)
+- [Patroni documentation](https://patroni.readthedocs.io/en/latest/)
+- [pgBackRest documentation](https://pgbackrest.org/user-guide.html)
+- [PostgreSQL 16 documentation](https://www.postgresql.org/docs/16/)
+- [etcd documentation](https://etcd.io/docs/)
+

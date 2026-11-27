@@ -1,0 +1,26 @@
+---
+- name: Configure SELinux
+  ansible.posix.selinux:
+    policy: targeted
+    state: "{{ percona_selinux_state }}"
+    update_kernel_param: "{{ ansible_distribution_major_version | int >= 9 }}"
+  register: percona_selinux_result
+
+- name: Verify reboot is permitted
+  ansible.builtin.assert:
+    that:
+      - percona_baseline_allow_reboot | bool
+    fail_msg: >-
+      SELinux configuration requires a reboot on
+      {{ inventory_hostname }}.
+      Reboot the server manually or explicitly enable
+      percona_baseline_allow_reboot for a fresh installation.
+  when: percona_selinux_result.reboot_required | default(false) | bool
+
+- name: Reboot server if SELinux configuration requires it
+  ansible.builtin.reboot:
+    reboot_timeout: 600
+  when:
+    - percona_selinux_result.reboot_required | default(false) | bool
+    - percona_baseline_allow_reboot | bool
+  throttle: 1

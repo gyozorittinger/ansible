@@ -1,0 +1,37 @@
+---
+percona_pgbackrest_stanza: "{{ percona_patroni_scope }}"
+
+percona_pgbackrest_archive_mode: "on"
+percona_pgbackrest_archive_timeout: "60s"
+
+percona_pgbackrest_binary: /usr/bin/pgbackrest
+
+percona_pgbackrest_archive_command: >-
+  {{ percona_pgbackrest_binary }}
+  --stanza={{ percona_pgbackrest_stanza }}
+  archive-push %p
+
+percona_pgbackrest_restore_command: >-
+  {{ percona_pgbackrest_binary }}
+  --stanza={{ percona_pgbackrest_stanza }}
+  archive-get %f %p
+
+percona_patroni_config_file: /etc/patroni/patroni.yml
+percona_patroni_restapi_port: 8008
+
+percona_pgbackrest_archive_restart_retries: 60
+percona_pgbackrest_archive_restart_delay: 5
+
+percona_pgbackrest_archive_max_replica_lag: 0
+percona_pgbackrest_archive_allow_switchover: true
+percona_pgbackrest_archive_cluster_group: percona_cluster
+
+percona_pgbackrest_backup_group: percona_backup
+
+percona_pgbackrest_archive_allowed_restart_parameters:
+  - archive_mode
+
+percona_pgbackrest_archive_config_retries: 30
+percona_pgbackrest_archive_config_retry_delay: 5
+
+percona_postgresql_port: 5432

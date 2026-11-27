@@ -1,0 +1,26 @@
+---
+percona_haproxy_group: percona_cluster
+
+percona_haproxy_config_file: /etc/haproxy/haproxy.cfg
+
+percona_haproxy_bind_address: "0.0.0.0"
+
+percona_haproxy_rw_port: 5000
+percona_haproxy_ro_port: 5001
+
+percona_haproxy_stats_enabled: true
+percona_haproxy_stats_address: "127.0.0.1"
+percona_haproxy_stats_port: 7000
+
+percona_haproxy_maxconn: 4000
+
+percona_haproxy_timeout_connect: 5s
+percona_haproxy_timeout_client: 30m
+percona_haproxy_timeout_server: 30m
+percona_haproxy_timeout_check: 5s
+
+percona_haproxy_check_interval: 3s
+percona_haproxy_check_fall: 3
+percona_haproxy_check_rise: 2
+
+percona_haproxy_ro_balance: roundrobin

@@ -1,0 +1,82 @@
+---
+- name: Verify dedicated backup filesystem is mounted
+  ansible.builtin.command:
+    argv:
+      - mountpoint
+      - -q
+      - "{{ percona_pgbackrest_mount_point }}"
+  register: backup_mount_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: percona_pgbackrest_require_mount | bool
+
+- name: Ensure backup filesystem is available
+  ansible.builtin.assert:
+    that:
+      - backup_mount_check.rc == 0
+      - percona_pgbackrest_repo_path.startswith(percona_pgbackrest_mount_point ~ '/')
+    fail_msg: >-
+      Backup filesystem is not mounted or repository
+      path is outside the dedicated filesystem.
+      Aborting installation.
+    success_msg: "Dedicated backup filesystem is mounted."
+  when: percona_pgbackrest_require_mount | bool
+
+- name: Create pgBackRest repository directory
+  ansible.builtin.file:
+    path: "{{ percona_pgbackrest_repo_path }}"
+    state: directory
+    owner: "{{ percona_pgbackrest_user }}"
+    group: "{{ percona_pgbackrest_group }}"
+    mode: '0750'
+
+- name: Create pgBackRest log directory
+  ansible.builtin.file:
+    path: "{{ percona_pgbackrest_log_path }}"
+    state: directory
+    owner: "{{ percona_pgbackrest_user }}"
+    group: "{{ percona_pgbackrest_group }}"
+    mode: '0750'
+
+- name: Create pgBackRest configuration directory
+  ansible.builtin.file:
+    path: "{{ percona_pgbackrest_config_file | dirname }}"
+    state: directory
+    owner: root
+    group: "{{ percona_pgbackrest_group }}"
+    mode: '0750'
+
+- name: Deploy pgBackRest server configuration
+  ansible.builtin.template:
+    src: pgbackrest.conf.j2
+    dest: "{{ percona_pgbackrest_config_file }}"
+    owner: root
+    group: "{{ percona_pgbackrest_group }}"
+    mode: '0640'
+    backup: true
+  notify: Restart pgBackRest server
+
+- name: Enable and start pgBackRest server
+  ansible.builtin.systemd_service:
+    name: pgbackrest
+    enabled: true
+    state: started
+
+- name: Apply pending pgBackRest configuration changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for pgBackRest TLS listener
+  ansible.builtin.wait_for:
+    host: "{{ percona_pgbackrest_tls_address }}"
+    port: "{{ percona_pgbackrest_tls_port }}"
+    timeout: 30
+
+- name: Display pgBackRest server configuration summary
+  ansible.builtin.debug:
+    msg:
+      - "pgBackRest server installation completed."
+      - "Server: {{ inventory_hostname }}"
+      - "Repository: {{ percona_pgbackrest_repo_path }}"
+      - "Stanza: {{ percona_pgbackrest_stanza }}"
+      - "TLS endpoint: {{ percona_pgbackrest_tls_address }}:{{ percona_pgbackrest_tls_port }}"
