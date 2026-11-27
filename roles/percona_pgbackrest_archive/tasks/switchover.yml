@@ -80,7 +80,7 @@
     - name: Verify candidate eligibility immediately before switchover
       ansible.builtin.uri:
         url: >-
-          http://{{ hostvars[patroni_archive_candidate].percona_node_ip }}:{{ percona_patroni_restapi_port }}/replica?lag={{ percona_pgbackrest_archive_max_replica_lag }}
+          http://{{ hostvars[patroni_archive_candidate].percona_node_ip }}:{{ percona_patroni_restapi_port }}/replica
         method: GET
         status_code: 200
       register: patroni_archive_candidate_health

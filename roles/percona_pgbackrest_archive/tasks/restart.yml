@@ -10,28 +10,30 @@
     method: GET
     status_code: 200
   register: patroni_archive_cluster
-
-- name: Identify current leader and replicas
-  ansible.builtin.set_fact:
-    patroni_archive_leaders: >-
+  vars:
+    expected_pending_members: >-
       {{
-        patroni_archive_cluster.json.members
-        | selectattr('role', 'equalto', 'leader')
+        groups[percona_pgbackrest_archive_cluster_group]
+        | map('extract', hostvars, 'patroni_archive_local_status')
+        | map(attribute='json')
+        | selectattr('pending_restart', 'defined')
+        | selectattr('pending_restart', 'equalto', true)
+        | map(attribute='patroni.name')
         | list
       }}
-    patroni_archive_replicas: >-
-      {{
-        patroni_archive_cluster.json.members
-        | selectattr('role', 'equalto', 'replica')
-        | list
-      }}
-    patroni_archive_pending_members: >-
+    actual_pending_members: >-
       {{
         patroni_archive_cluster.json.members
         | selectattr('pending_restart', 'defined')
         | selectattr('pending_restart', 'equalto', true)
+        | map(attribute='name')
         | list
       }}
+  until:
+    - patroni_archive_cluster.status == 200
+    - expected_pending_members | difference(actual_pending_members) | length == 0
+  retries: "{{ percona_pgbackrest_archive_config_retries }}"
+  delay: "{{ percona_pgbackrest_archive_config_retry_delay }}"
 
 - name: Validate Patroni cluster topology
   ansible.builtin.assert:
