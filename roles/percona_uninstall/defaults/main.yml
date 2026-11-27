@@ -31,3 +31,4 @@ percona_uninstall_paths:
   - /etc/keepalived
   - /etc/pgbackrest
   - /etc/pgbackrest.conf
+  - "{{ percona_postgresql_data_dir }}"
