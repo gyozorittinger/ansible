@@ -22,3 +22,6 @@ percona_pgbackrest_start_fast: "y"
 # PostgreSQL WAL archiving
 percona_pgbackrest_archive_mode: "on"
 percona_pgbackrest_archive_timeout: "60s"
+
+percona_pgbackrest_archive_max_replica_lag: 0
+percona_pgbackrest_archive_allow_switchover: true

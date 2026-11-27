@@ -2,3 +2,13 @@
 - name: Configure Patroni WAL archiving
   ansible.builtin.import_tasks: configure.yml
   run_once: true
+
+- name: Wait for Patroni configuration propagation
+  ansible.builtin.pause:
+    seconds: 15
+  when: patroni_archive_config_changed | bool
+  run_once: true
+
+- name: Perform rolling PostgreSQL restart
+  ansible.builtin.import_tasks: restart.yml
+  run_once: true

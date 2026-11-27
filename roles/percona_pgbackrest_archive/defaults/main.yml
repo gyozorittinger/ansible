@@ -16,3 +16,7 @@ percona_patroni_restapi_port: 8008
 
 percona_pgbackrest_archive_restart_retries: 60
 percona_pgbackrest_archive_restart_delay: 5
+
+percona_pgbackrest_archive_max_replica_lag: 0
+percona_pgbackrest_archive_allow_switchover: true
+percona_pgbackrest_archive_cluster_group: percona_cluster
