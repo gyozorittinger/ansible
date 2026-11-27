@@ -1,0 +1,11 @@
+---
+percona_version: 16
+percona_packages_profile: backup
+
+percona_pgbackrest_mount_point: /backup
+percona_pgbackrest_repo_path: "{{ percona_pgbackrest_mount_point }}/pgbackrest"
+percona_pgbackrest_require_mount: true
+
+percona_pgbackrest_log_path: /var/log/pgbackrest
+percona_pgbackrest_tls_port: 8432
+percona_pgbackrest_stanza: ijr-stage-pgsql
