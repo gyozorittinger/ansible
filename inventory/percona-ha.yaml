@@ -1,0 +1,96 @@
+---
+# Percona PostgreSQL HA cluster inventory
+#
+# This example defines:
+#   - 3 PostgreSQL HA cluster nodes
+#   - 1 dedicated pgBackRest backup server
+#   - 1 local Ansible controller
+#
+# Before running the installation:
+#   1. Replace the example hostnames and IP addresses.
+#   2. Set a unique cluster name.
+#   3. Configure the virtual IP address and network interface.
+#   4. Make sure all remote hosts are accessible via SSH.
+#   5. Verify hostname resolution using DNS or /etc/hosts.
+#
+# Do not rename the inventory groups.
+# The playbooks and roles depend on these group names.
+
+all:
+  vars:
+
+    # SSH connection settings
+    ansible_user: root
+    ansible_python_interpreter: /usr/bin/python3
+
+    # PostgreSQL version
+    # Tested version: 16
+    percona_version: 16
+
+    # EDIT: Unique name of the PostgreSQL cluster.
+    # This name is also used as the pgBackRest stanza name.
+    percona_patroni_scope: example-pgsql
+
+  children:
+
+    # PostgreSQL HA cluster
+    # Exactly three database nodes are required.
+    percona_cluster:
+      hosts:
+
+        # EDIT: First database node
+        example-pgsql-node-01:
+          ansible_host: example-pgsql-node-01.example.com
+          percona_node_ip: "192.0.2.11"
+
+        # EDIT: Second database node
+        example-pgsql-node-02:
+          ansible_host: example-pgsql-node-02.example.com
+          percona_node_ip: "192.0.2.12"
+
+        # EDIT: Third database node
+        example-pgsql-node-03:
+          ansible_host: example-pgsql-node-03.example.com
+          percona_node_ip: "192.0.2.13"
+
+      vars:
+
+        # AUTOMATIC: Unique etcd cluster token.
+        percona_etcd_cluster_token: "{{ percona_patroni_scope }}"
+
+        # EDIT: Network interface used by Keepalived.
+        # The interface must exist on all database nodes.
+        # Examples: ens192, ens160, eth0
+        percona_keepalived_interface: ens192
+
+        # EDIT: Virtual IP address used by database clients.
+        # This IP address must not be assigned to another host.
+        percona_keepalived_vip: "192.0.2.10"
+
+        # EDIT: Virtual IP subnet prefix length.
+        # Examples: 24 = 255.255.255.0
+        #           26 = 255.255.255.192
+        percona_keepalived_vip_prefix: 24
+
+        # OPTIONAL: Keepalived virtual router ID.
+        # Valid range: 1-255.
+        # Use a unique ID for each VRRP instance on the same network.
+        percona_keepalived_vrid: 51
+
+    # Dedicated pgBackRest backup server
+    # Exactly one backup server is required.
+    percona_backup:
+      hosts:
+
+        # EDIT: Backup server hostname and IP address
+        example-pgsql-backup-01:
+          ansible_host: example-pgsql-backup-01.example.com
+          percona_node_ip: "192.0.2.14"
+
+    # Local Ansible controller
+    # Do not change unless Ansible is installed in a different location.
+    local_controller:
+      hosts:
+        localhost:
+          ansible_connection: local
+          ansible_python_interpreter: /opt/ansible/2.19/bin/python

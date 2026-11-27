@@ -1,26 +1,115 @@
 ---
+# Percona pgBackRest configuration
+#
+# Review this file before installing the backup infrastructure.
+# Backup scheduling must be configured manually after installation.
+
+# ============================================================
+# PostgreSQL compatibility
+# ============================================================
+
+# Tested PostgreSQL version: 16
+# Keep this value consistent with percona_ha_vars.yml.
 percona_version: 16
 
+
+# ============================================================
+# Backup storage
+# ============================================================
+
+# EDIT: Dedicated backup filesystem mount point.
+# The filesystem must be created and mounted before installation.
 percona_pgbackrest_mount_point: /backup
+
+# AUTOMATIC: Backup repository directory.
 percona_pgbackrest_repo_path: "{{ percona_pgbackrest_mount_point }}/pgbackrest"
+
+# SAFETY: Verify that the backup filesystem is mounted.
+# Prevents accidental backups to the root filesystem.
 percona_pgbackrest_require_mount: true
 
+# OPTIONAL: pgBackRest log directory.
 percona_pgbackrest_log_path: /var/log/pgbackrest
+
+
+# ============================================================
+# Network and TLS
+# ============================================================
+
+# OPTIONAL: pgBackRest TLS communication port.
+# Must be accessible between the database and backup servers.
 percona_pgbackrest_tls_port: 8432
+
+# AUTOMATIC: Use the PostgreSQL cluster name as the stanza name.
 percona_pgbackrest_stanza: "{{ percona_patroni_scope }}"
 
+
+# ============================================================
+# Backup retention
+# ============================================================
+
+# OPTIONAL: Number of full backups to retain.
+# This is a backup count, not a number of days.
 percona_pgbackrest_retention_full: 2
+
+# OPTIONAL: Number of differential backups to retain.
+# Actual retention also depends on full backup expiration.
 percona_pgbackrest_retention_diff: 7
 
+
+# ============================================================
+# Backup performance
+# ============================================================
+
+# OPTIONAL: Maximum number of parallel pgBackRest processes.
+# Increase carefully depending on CPU, storage and network capacity.
 percona_pgbackrest_process_max: 4
+
+# OPTIONAL: Backup compression algorithm.
 percona_pgbackrest_compress_type: zst
+
+# OPTIONAL: Compression level.
+# Higher values may increase CPU usage.
 percona_pgbackrest_compress_level: 3
+
+# Prefer taking backups from a PostgreSQL standby.
+# Reduces backup-related load on the primary server.
 percona_pgbackrest_backup_standby: "y"
+
+# Request an immediate checkpoint when starting a backup.
+# Reduces backup startup time but may temporarily increase I/O.
 percona_pgbackrest_start_fast: "y"
 
+
+# ============================================================
 # PostgreSQL WAL archiving
+# ============================================================
+
+# Enable continuous WAL archiving.
+# Required for the configured pgBackRest backup infrastructure.
 percona_pgbackrest_archive_mode: "on"
+
+# OPTIONAL: Force a WAL segment switch after this interval
+# when there has been database activity.
+# This setting is not a guaranteed recovery point objective.
 percona_pgbackrest_archive_timeout: "60s"
 
+# The archive_command and restore_command parameters are
+# generated automatically using the configured stanza name.
+
+
+# ============================================================
+# Automated rolling restart and switchover
+# ============================================================
+
+# ADVANCED: Maximum allowed replica lag in bytes before
+# an automated restart or switchover.
+# Zero requires fully synchronized replicas at the time of the check.
 percona_pgbackrest_archive_max_replica_lag: 0
+
+# SAFETY: Allow an automated controlled Patroni switchover
+# when enabling WAL archiving requires a primary restart.
+#
+# If disabled, the installation may stop when a primary
+# restart is required.
 percona_pgbackrest_archive_allow_switchover: true
